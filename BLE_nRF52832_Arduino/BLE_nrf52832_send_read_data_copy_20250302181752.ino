@@ -41,17 +41,7 @@ void setup() {
   Serial.println("Setup complete, now advertising...");
 }
 
-void loop() {
-  static uint32_t counter = 0;
-  static uint32_t lastMillis = 0;
-
-  // Once connected and if the central enabled notifications,
-  // we can periodically send an update.
-  if (Bluefruit.connected()) {
-    uint32_t now = millis();
-    if (now - lastMillis >= 1000) {
-      lastMillis = now;
-
+void send_battery_alert() {
       // Create a small string message
       char message[32];
       // snprintf(message, sizeof(message), "Hello #%lu", (unsigned long)counter++);
@@ -65,13 +55,16 @@ void loop() {
       // Notify new value
       bool success = battery_life_char.notify((uint8_t*)message, strlen(message));
       if (success) {
-        Serial.print("Notified: ");
+        Serial.print("battery: ");
         Serial.println(message);
       } else {
         Serial.println("Notification failed. Possibly not enabled?");
       }
-    }
-  }
+}
+
+void loop() {
+  send_battery_alert();
+  delay(1000);
 }
 
 //--------------------------------------------------------------------
@@ -120,12 +113,32 @@ void startAdvertising() {
   Bluefruit.Advertising.start(0);             // 0 = advertise forever
 }
 
+bool isNumeric (String input) {
+  char c;
+  if (input == "") {
+    return false;
+  }
+  for (int i = 0; i < input.length(); i++) {
+    c = input[i];
+    if (c < '0' || c > '9') {
+      return false;
+    }
+  }
+  return true;
+}
 
+// functions that intakes data from the Vent Angle characteristic and adjusts the vent angle accordingly
 void writeCallback(uint16_t conn_hdl, BLECharacteristic* chr, uint8_t* data, uint16_t len) {
-  Serial.print("[WriteChar] Data received: ");
   String incomingMessage;
   incomingMessage = String((char*)data).substring(0, len); // Prevent buffer overflow
 
   Serial.print("[WriteChar] Received String: ");
   Serial.println(incomingMessage);
+
+  if (isNumeric(incomingMessage)) {
+    Serial.println("NUMBER DETECTED");
+  }
+  else {
+    Serial.println("INVALID INTEGER");
+  }
 }
