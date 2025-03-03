@@ -1,0 +1,2 @@
+# BLE_nRF52832_Arduino
+Code compatible with the Adafruit Feather nRF52832 development board. Intended to be used with the Arduino IDE, and allows connection with an ESP32 via BLE. The nRF52832 acts as the perpherial/server, and the ESP32 acts as the client.
