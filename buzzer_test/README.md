@@ -1,0 +1,2 @@
+# Buzzer Test
+Arduino file to play a sample song with a buzzer. No additional libraries required with the standard Arduino IDE. Intended for the ESP32 but should be compatible with other Arduino compatible devices as well.
