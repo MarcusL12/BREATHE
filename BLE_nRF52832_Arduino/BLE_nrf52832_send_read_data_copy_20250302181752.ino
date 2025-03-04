@@ -6,6 +6,7 @@
 *********************************************************************/
 
 #include <bluefruit.h>
+#include <Servo.h>
 
 //--------------------------------------------------------------------
 // Custom 128-bit Service & Characteristic UUIDs
@@ -18,6 +19,10 @@ BLEService customService(SERVICE_UUID);
 BLECharacteristic battery_life_char(BATTERY_LIFE_UUID);
 BLECharacteristic vent_angle_char(VENT_ANGLE_UUID);
 
+// Establish the servo motor
+#define ServoPin 7
+Servo myServo;
+
 //--------------------------------------------------------------------
 // Setup
 //--------------------------------------------------------------------
@@ -25,7 +30,9 @@ void setup() {
   Serial.begin(115200);
   while (!Serial) delay(10);
 
-  Serial.println("nRF52832 BLE Peripheral Demo");
+  myServo.attach(ServoPin);
+
+  Serial.println("nRF52832 BLE Peripheral");
 
   // 1) Initialize the Bluefruit stack
   Bluefruit.begin();
@@ -125,6 +132,16 @@ bool isNumeric (String input) {
     }
   }
   return true;
+}
+
+// Function that intakes an angle and writes it to the servo motor
+void moveServo(int angle) {
+  // Moves to the angle and waits for 5 seconds, then detaches to avoid consuming too much current
+  myServo.attach(ServoPin);
+  delay(100);
+  myServo.write(angle);
+  delay(5000);
+  myServo.detach();
 }
 
 // functions that intakes data from the Vent Angle characteristic and adjusts the vent angle accordingly
