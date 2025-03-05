@@ -137,10 +137,11 @@ bool isNumeric (String input) {
 // Function that intakes an angle and writes it to the servo motor
 void moveServo(int angle) {
   // Moves to the angle and waits for 5 seconds, then detaches to avoid consuming too much current
+  Serial.print("Attempting to move to angle "); Serial.println(angle);
   myServo.attach(ServoPin);
   delay(100);
   myServo.write(angle);
-  delay(5000);
+  delay(1000); // will normally be 5 secs (5000), but changing to 1 sec (1000) for testing purposes
   myServo.detach();
 }
 
@@ -154,6 +155,7 @@ void writeCallback(uint16_t conn_hdl, BLECharacteristic* chr, uint8_t* data, uin
 
   if (isNumeric(incomingMessage)) {
     Serial.println("NUMBER DETECTED");
+    moveServo(incomingMessage.toInt());
   }
   else {
     Serial.println("INVALID INTEGER");
