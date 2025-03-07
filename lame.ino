@@ -16,6 +16,10 @@
 #include "large.h"
 #include "small.h"
 
+#include "DHT20.h"
+
+//new beginning
+
 //1 - include BLE libraries
 #include <BLEDevice.h>
 #include <BLEUtils.h>
@@ -122,58 +126,89 @@ String ventStatus = "OPEN";  // Default status is OPEN
 static BLEUUID serviceUUID(VENT_SERVICE_UUID);
 static BLEUUID characteristicUUID(VENT_CHARACTERISTIC_UUID);
 
-static BLERemoteCharacteristic* ventCharacteristic;
-static BLEAdvertisedDevice* myDevice;
+static boolean doConnect = false;
 static boolean isConnected = false;
+static boolean doScan = false;
+static BLERemoteCharacteristic* ventCharacteristic = nullptr;
+static BLEAdvertisedDevice* myDevice = nullptr;
+
+static void notifyCallback(BLERemoteCharacteristic* pBLERemoteCharacteristic, uint8_t* pData, size_t length, bool isNotify) {
+    Serial.print(" Notification received: ");
+    Serial.println((char*)pData);
+}
 
 class MyClientCallback : public BLEClientCallbacks {
-    void onConnect(BLEClient* pclient) {
-        isConnected = true;
+    void onConnect(BLEClient* pclient) override {
+        Serial.println("BLE Client Connected!");
     }
 
-    void onDisconnect(BLEClient* pclient) {
+    void onDisconnect(BLEClient* pclient) override {
+        Serial.println("BLE Client Disconnected! Restarting scan...");
         isConnected = false;
-        Serial.println("Disconnected from Vent!");
     }
 };
 
-void connectToServer() {
-    Serial.println("Connecting to vent...");
+bool connectToServer() {
+    if (myDevice == nullptr) {
+        Serial.println(" No device found to connect to.");
+        return false;
+    }
+
+    Serial.print("Connecting to Vent at: ");
+    Serial.println(myDevice->getAddress().toString().c_str());
 
     BLEClient* pClient = BLEDevice::createClient();
+    Serial.println(" - Created BLE client");
     pClient->setClientCallbacks(new MyClientCallback());
 
     if (!pClient->connect(myDevice)) {
-        Serial.println("Failed to connect");
-        return;
+        Serial.println(" BLE Connection Failed!");
+        isConnected = false;
+        return false;
     }
 
-    Serial.println("Connected to Vent!");
+    Serial.println(" Connected to Vent!");
+    pClient->setMTU(517);  // Set max MTU for better data transfer
 
+    //  Get the service
     BLERemoteService* pRemoteService = pClient->getService(serviceUUID);
     if (pRemoteService == nullptr) {
-        Serial.println("Failed to find Vent Service UUID");
+        Serial.println(" Failed to find Vent Service UUID!");
         pClient->disconnect();
-        return;
+        return false;
     }
 
+    Serial.println(" - Found Vent service!");
+
+    // Get the characteristic
     ventCharacteristic = pRemoteService->getCharacteristic(characteristicUUID);
     if (ventCharacteristic == nullptr) {
-        Serial.println("Failed to find Vent Characteristic UUID");
+        Serial.println(" Failed to find Vent Characteristic UUID!");
         pClient->disconnect();
-        return;
+        return false;
     }
 
-    Serial.println("Vent Characteristic Found!");
+    Serial.println(" - Found Vent characteristic!");
+
+    // Enable notifications if available
+    if (ventCharacteristic->canNotify()) {
+        ventCharacteristic->registerForNotify(notifyCallback);
+    }
+
+    isConnected = true;
+    return true;
 }
 
 class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
-    void onResult(BLEAdvertisedDevice advertisedDevice) {
+    void onResult(BLEAdvertisedDevice advertisedDevice) override {
+        Serial.print(" BLE Device Found: ");
+        Serial.println(advertisedDevice.toString().c_str());
+
         if (advertisedDevice.haveServiceUUID() && advertisedDevice.isAdvertisingService(serviceUUID)) {
-            Serial.println("Vent Found!");
             BLEDevice::getScan()->stop();
             myDevice = new BLEAdvertisedDevice(advertisedDevice);
-            connectToServer();
+            doConnect = true;
+            doScan = true;
         }
     }
 };
@@ -181,17 +216,35 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
 void startBLEScan() {
     BLEScan* pBLEScan = BLEDevice::getScan();
     pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
+    pBLEScan->setInterval(1349);
+    pBLEScan->setWindow(449);
     pBLEScan->setActiveScan(true);
-    pBLEScan->start(5);
+    pBLEScan->start(5, false);
 }
 
 void sendVentCommand(String command) {
+    Serial.print(" Checking BLE connection... isConnected: ");
+    Serial.println(isConnected);
+
     if (isConnected && ventCharacteristic != nullptr) {
         ventCharacteristic->writeValue(command.c_str(), command.length());
         Serial.print("BLE Message Sent: ");
         Serial.println(command);
     } else {
-        Serial.println("Not connected to Vent!");
+        Serial.println("Not connected to Vent! Retrying connection...");
+        connectToServer();
+    }
+}
+
+void sendTemperatureValue() {
+    if (isConnected && ventCharacteristic != nullptr) {
+        String tempCommand = "set:" + String(currentValue);  // Format message
+        ventCharacteristic->writeValue(tempCommand.c_str(), tempCommand.length());
+        Serial.print("BLE Message Sent: ");
+        Serial.println(tempCommand);
+    } else {
+        Serial.println("Not connected to Vent! Retrying connection...");
+        connectToServer();
     }
 }
 
@@ -203,6 +256,33 @@ void openVent() {
 void closeVent() {
     sendVentCommand("close");
 }
+
+void handleBluetooth() {
+    static bool wasConnected = false; // Tracks previous connection status
+
+    if (doConnect) {
+        if (connectToServer()) {
+            Serial.println("Connected to Vent successfully.");
+            wasConnected = true;
+        } else {
+            Serial.println("Connection to Vent failed.");
+            wasConnected = false;
+        }
+        doConnect = false;
+    }
+
+    if (isConnected) {
+        if (!wasConnected) { // Only print once when connection is first established
+            Serial.println("Vent is already connected.");
+            wasConnected = true; // Update status so it doesn't print again
+        }
+    } else if (doScan) {
+        Serial.println("Restarting BLE scan...");
+        BLEDevice::getScan()->start(0);
+        wasConnected = false; // Update status so it prints again when reconnected
+    }
+}
+
 
 
 
@@ -582,79 +662,144 @@ void displayCO2(uint16_t co2) {
     sprite.pushSprite(180, 170);  // Adjust position as needed
 }
 
+/*
+void temp()
+{
+  if (millis() - DHT.lastRead() >= 1000)
+  {
+    //  READ DATA
+    uint32_t start = micros();
+    int status = DHT.read();
+    uint32_t stop = micros();
+
+    if ((count % 10) == 0)
+    {
+      count = 0;
+      Serial.println();
+      Serial.println("Type\tHumidity (%)\tTemp (°C)\tTime (µs)\tStatus");
+    }
+    count++;
+
+    Serial.print("DHT20 \t");
+    //  DISPLAY DATA, sensor has only one decimal.
+    Serial.print(DHT.getHumidity(), 1);
+    Serial.print("\t\t");
+    Serial.print(DHT.getTemperature(), 1);
+    Serial.print("\t\t");
+    Serial.print(stop - start);
+    Serial.print("\t\t");
+    switch (status)
+    {
+      case DHT20_OK:
+        Serial.print("OK");
+        break;
+      case DHT20_ERROR_CHECKSUM:
+        Serial.print("Checksum error");
+        break;
+      case DHT20_ERROR_CONNECT:
+        Serial.print("Connect error");
+        break;
+      case DHT20_MISSING_BYTES:
+        Serial.print("Missing bytes");
+        break;
+      case DHT20_ERROR_BYTES_ALL_ZERO:
+        Serial.print("All bytes read zero");
+        break;
+      case DHT20_ERROR_READ_TIMEOUT:
+        Serial.print("Read time out");
+        break;
+      case DHT20_ERROR_LASTREAD:
+        Serial.print("Error read too fast");
+        break;
+      default:
+        Serial.print("Unknown error");
+        break;
+    }
+    Serial.print("\n");
+  }
+}
+*/
+
 // Function to read and display sensor data
 void displaySensorData() {
-  uint16_t error;
-  char errorMessage[256];
-  
-  // Read Measurement
-  uint16_t co2 = 0;
-  float temperature = 0.0f;
-  float humidity = 0.0f;
-  bool isDataReady = false;
+    static String lastVentStatus = "NONE"; // Track last vent state to prevent redundant messages
+    static unsigned long lastVentCommandTime = 0; // Track last time a command was sent
+    const unsigned long ventUpdateInterval = 30000; // 30 seconds interval
 
-  // Check if data is ready
-  error = scd4x.getDataReadyFlag(isDataReady);
-  if (error) {
-    Serial.print("Error trying to execute getDataReadyFlag(): ");
-    errorToString(error, errorMessage, 256);
-    Serial.println(errorMessage);
-    return;
-  }
+    uint16_t error;
+    char errorMessage[256];
 
-  // If data is ready, read the measurement
-  if (isDataReady) {
+    uint16_t co2 = 0;
+    float temperature = 0.0f;
+    float humidity = 0.0f;
+    bool isDataReady = false;
 
-    error = scd4x.readMeasurement(co2, temperature, humidity);
-
+    error = scd4x.getDataReadyFlag(isDataReady);
     if (error) {
-
-        Serial.print("Error trying to execute readMeasurement(): ");
+        Serial.print("Error trying to execute getDataReadyFlag(): ");
         errorToString(error, errorMessage, 256);
         Serial.println(errorMessage);
+        return;
+    }
 
-    } 
+    if (isDataReady) {
+        error = scd4x.readMeasurement(co2, temperature, humidity);
 
-    else if (co2 == 0) {
-
-      Serial.println("Invalid sample detected, skipping.");
-
-    } 
-    
-    else {
-      // Convert temperature from Celsius to Fahrenheit
-      float temperatureF = (temperature * 9.0 / 5.0) + 32;
-
-      // Print the data to Serial Monitor
-      Serial.print("CO2: ");
-      Serial.print(co2);
-      Serial.print("\t");
-      Serial.print("Temperature: ");
-      Serial.print(temperatureF);
-      Serial.print(" °F\t");
-      Serial.print("Humidity: ");
-      Serial.println(humidity);
-
-      // Update the TFT with sensor readings
-      //drawStatusBox(200, 60, "Temp: " + String(temperatureF) + " F", 0x31a6);
-      displayTemperature(temperatureF);
-      displayCO2(co2);   // CO2 on the left side
-
-      // CO2 Level Status Box (Move below CO2 value)
-        if (co2 > 1800) {
-          // CO2 levels are high, set box to red
-          drawStatusBox(10, 275, "High CO2 LEVEL!", TFT_RED);  // Moved here
-          analogWrite(BUZZER, 100);
+        if (error) {
+            Serial.print("Error trying to execute readMeasurement(): ");
+            errorToString(error, errorMessage, 256);
+            Serial.println(errorMessage);
         } 
-
+        else if (co2 == 0) {
+            Serial.println("Invalid sample detected, skipping.");
+        } 
         else {
-        // CO2 levels are normal, set box to green
-        drawStatusBox(10, 275, "Normal CO2 Levels :)", 0x18c3);  // Moved here
-        analogWrite(BUZZER, 0);
+            float temperatureF = (temperature * 9.0 / 5.0) + 32; // Convert to Fahrenheit
+            Serial.print("CO2: "); Serial.print(co2);
+            Serial.print("\tTemperature: "); Serial.print(temperatureF);
+            Serial.print(" °F\tHumidity: "); Serial.println(humidity);
+
+            displayTemperature(temperatureF);
+            displayCO2(co2);
+
+            // CO2 alert
+            if (co2 > 1800) {
+                drawStatusBox(10, 275, "High CO2 LEVEL!", TFT_RED);
+                analogWrite(BUZZER, 100);
+            } else {
+                drawStatusBox(10, 275, "Normal CO2 Levels :)", 0x18c3);
+                analogWrite(BUZZER, 0);
+            }
+
+            // **Vent Control Based on Set Temperature**
+            float thresholdHigh = currentValue + 2;
+            float thresholdLow = currentValue - 2;
+
+            unsigned long currentMillis = millis();
+
+            // Only check every 30 seconds
+            if (currentMillis - lastVentCommandTime >= ventUpdateInterval) {
+                if (temperatureF > thresholdHigh && lastVentStatus != "OPEN") {
+                    openVent();
+                    ventStatus = "OPEN";
+                    lastVentStatus = "OPEN";
+                    lastVentCommandTime = currentMillis;
+                    Serial.println("✅ VENT OPENED: Temperature is above threshold.");
+                    drawVentStatus();
+                } 
+                else if (temperatureF < thresholdLow && lastVentStatus != "CLOSED") {
+                    closeVent();
+                    ventStatus = "CLOSED";
+                    lastVentStatus = "CLOSED";
+                    lastVentCommandTime = currentMillis;
+                    Serial.println("✅ VENT CLOSED: Temperature is below threshold.");
+                    drawVentStatus();
+                }
+            }
         }
-      }
-   }
+    }
 }
+
 
 
 
@@ -678,12 +823,30 @@ void print_pinout() {
   Serial.println (TFT_RST);   // Set TFT_RST to -1 if display RESET is connected to ESP32 board RST
 }
 
+//start here
+void scanI2C() {
+    Serial.println("Scanning I2C...");
+    byte count = 0;
+    for (byte i = 8; i < 120; i++) {
+        Wire.beginTransmission(i);
+        if (Wire.endTransmission() == 0) {
+            Serial.print("Found I2C device at 0x");
+            Serial.println(i, HEX);
+            count++;
+        }
+    }
+    if (count == 0) Serial.println("No I2C devices found");
+}
+
+
 void setup(void){ 
   print_pinout();
   analogWrite(TFT_BL, 200);   //send a pwm signal to backlight pin
   Serial.begin(115200);       //set baud rate 
-  BLEDevice::init("ESP32_GUI_Client");  // ESP32 name
-  startBLEScan();
+  Serial.println("Starting Vent Control System...");
+
+    BLEDevice::init("ESP32_GUI_Client");
+    startBLEScan();
 
   tft.init();                 //initiliaze tft screen
   tft.setRotation(1);         //set oritentation of screen contetns
@@ -692,6 +855,14 @@ void setup(void){
   // Initialize SCD4x sensor
   Wire.begin();
   scd4x.begin(Wire);
+  scanI2C();
+
+      uint16_t error = scd4x.startPeriodicMeasurement();
+    if (error) {
+        Serial.println("Failed to start SCD41 measurements.");
+    } else {
+        Serial.println("SCD41 measurement started.");
+    }
 
   sprite.createSprite(320, 40);   // Size to match the "BREATHE Dashboard" section
   sprite.loadFont(inter);         // Load custom font (inter)
@@ -752,9 +923,10 @@ void loop() {
   uint16_t x, y;
   static unsigned long lastDebounceTime = 0;  // For debouncing
   unsigned long debounceDelay = 30;  // 50ms debounce time
-    displaySensorData();
+  displaySensorData();
+  //temp();
   delay(100); // Reduce the delay for better responsiveness
-  
+  handleBluetooth();
   
 
 
@@ -768,6 +940,8 @@ void loop() {
       #ifdef BLACK_SPOT
         tft.fillCircle(x, y, 2, TFT_BLACK);
       #endif
+
+
       
       if (SwitchOn) {
         if ((x > REDBUTTON_X) && (x < (REDBUTTON_X + REDBUTTON_W))) {
@@ -776,7 +950,9 @@ void loop() {
             redBtn();
           }
         }
-      } else {  // Record is off (SwitchOn == false)
+      } 
+      
+      else {  // Record is off (SwitchOn == false)
         if ((x > GREENBUTTON_X) && (x < (GREENBUTTON_X + GREENBUTTON_W))) {
           if ((y > GREENBUTTON_Y) && (y <= (GREENBUTTON_Y + GREENBUTTON_H))) {
             Serial.println("Green btn hit");
@@ -800,57 +976,60 @@ void loop() {
             drawValue();
           }
         }
- }
-
-  if ((x > PLUSBUTTON_X) && (x < (PLUSBUTTON_X + BUTTON_WIDTH))) {
-    if ((y > PLUSBUTTON_Y) && (y <= (PLUSBUTTON_Y + BUTTON_HEIGHT))) {
-      if (currentValue < 85) {
-        currentValue++;
-        drawValue();
       }
-    }
-  }
 
-if ((x > SETBUTTON_X) && (x < (SETBUTTON_X + SETBUTTON_W))) {
-        if ((y > SETBUTTON_Y) && (y <= (SETBUTTON_Y + SETBUTTON_H))) {
-          float currentTemperatureF = (float)currentValue;  // Use the currentValue as the temperature in Fahrenheit
-          
-          // Get the vent angle corresponding to the temperature
-          int ventAngle = getVentAngle(currentTemperatureF);
-
-          // Print the temperature and vent angle to the Serial Monitor
-          /*
-          Serial.print("Temperature: ");
-          Serial.print(currentTemperatureF);
-          Serial.print(" °F, Vent Angle: ");
-          Serial.println(ventAngle);
-          */
-    }
-  }
-
-  if ((x > SETBUTTON_X) && (x < (SETBUTTON_X + SETBUTTON_W))) {
-    if ((y > SETBUTTON_Y) && (y <= (SETBUTTON_Y + SETBUTTON_H))) {
-        if (SwitchOn) {  // Only allow touch in Autonomous Mode
-            Serial.print("Set value: ");
-            Serial.println(currentValue);
+      if ((x > PLUSBUTTON_X) && (x < (PLUSBUTTON_X + BUTTON_WIDTH))) {
+        if ((y > PLUSBUTTON_Y) && (y <= (PLUSBUTTON_Y + BUTTON_HEIGHT))) {
+          if (currentValue < 85) {
+            currentValue++;
+            drawValue();
+          }
         }
-    }
-}
+      }
 
-if ((x > OPENBUTTON_X) && (x < (OPENBUTTON_X + BUTTON_W)) &&
-    (y > OPENBUTTON_Y) && (y <= (OPENBUTTON_Y + BUTTON_H))) {
-    Serial.println("Vent Status: OPEN");
-    ventStatus = "OPEN";  // Update status
-    drawVentStatus();  // Refresh text
-}
+      if ((x > SETBUTTON_X) && (x < (SETBUTTON_X + SETBUTTON_W))) {
+              if ((y > SETBUTTON_Y) && (y <= (SETBUTTON_Y + SETBUTTON_H))) {
+                float currentTemperatureF = (float)currentValue;  // Use the currentValue as the temperature in Fahrenheit
+                
+                // Get the vent angle corresponding to the temperature
+                int ventAngle = getVentAngle(currentTemperatureF);
+
+                // Print the temperature and vent angle to the Serial Monitor
+                /*
+                Serial.print("Temperature: ");
+                Serial.print(currentTemperatureF);
+                Serial.print(" °F, Vent Angle: ");
+                Serial.println(ventAngle);
+                */
+          }
+        }
+
+            if ((x > SETBUTTON_X) && (x < (SETBUTTON_X + SETBUTTON_W))) {
+                if ((y > SETBUTTON_Y) && (y <= (SETBUTTON_Y + SETBUTTON_H))) {
+                    if (SwitchOn) {  // Only allow in Autonomous Mode
+                        Serial.print("Sending temperature setting: ");
+                        Serial.println(currentValue);
+                        sendTemperatureValue();  // Send value over BLE
+                    }
+                }
+            }
+
+      if ((x > OPENBUTTON_X) && (x < (OPENBUTTON_X + BUTTON_W)) &&
+          (y > OPENBUTTON_Y) && (y <= (OPENBUTTON_Y + BUTTON_H))) {
+          Serial.println("Vent Status: OPEN");
+          ventStatus = "OPEN";  // Update status
+          drawVentStatus();  // Refresh text
+          openVent();
+      }
 
 // Close Button Pressed
-if ((x > CLOSEBUTTON_X) && (x < (CLOSEBUTTON_X + BUTTON_W)) &&
-    (y > CLOSEBUTTON_Y) && (y <= (CLOSEBUTTON_Y + BUTTON_H))) {
-    Serial.println("Vent Status: CLOSED");
-    ventStatus = "CLOSED";  // Update status
-    drawVentStatus();  // Refresh text
-}
+      if ((x > CLOSEBUTTON_X) && (x < (CLOSEBUTTON_X + BUTTON_W)) &&
+          (y > CLOSEBUTTON_Y) && (y <= (CLOSEBUTTON_Y + BUTTON_H))) {
+          Serial.println("Vent Status: CLOSED");
+          ventStatus = "CLOSED";  // Update status
+          drawVentStatus();  // Refresh text
+          closeVent();
+      }
     }
   
   // Continuously display sensor data
@@ -864,4 +1043,5 @@ if ((x > CLOSEBUTTON_X) && (x < (CLOSEBUTTON_X + BUTTON_W)) &&
     */
 }
 
+//please work!
 
