@@ -733,6 +733,9 @@ void temp()
 }
 */
 
+
+// Function to read and display sensor data
+=======
 void checkBatteryAndTriggerBuzzer() {
     // turn string into float
     if (BatteryLife.equals("")) {
@@ -959,8 +962,12 @@ void loop() {
   //temp();
   delay(100); // Reduce the delay for better responsiveness
   handleBluetooth();
+
+  
+
   checkBatteryAndTriggerBuzzer();
  // Serial.println(BatteryLife);
+
 
 
   // See if there's any touch data for us
@@ -1077,3 +1084,4 @@ void loop() {
 }
 
 //please work!
+
