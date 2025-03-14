@@ -11,11 +11,11 @@
 //--------------------------------------------------------------------
 // Custom 128-bit Service & Characteristic UUIDs
 //--------------------------------------------------------------------
-#define SERVICE_UUID           "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
+#define SERVICE_UUID           "12345678-1234-5678-1234-56789abcdef0"
 #define BATTERY_LIFE_UUID      "e540f441-a246-4072-b162-e2b67d4c7f57"
-#define VENT_ANGLE_UUID        "beb5483e-36e1-4688-b7f5-ea07361b26a8"
+#define VENT_ANGLE_UUID        "abcdef01-1234-5678-1234-56789abcdef1"
 // Create the BLE Service & Characteristic objects
-BLEService customService(SERVICE_UUID);
+BLEService        customService(SERVICE_UUID);
 BLECharacteristic battery_life_char(BATTERY_LIFE_UUID);
 BLECharacteristic vent_angle_char(VENT_ANGLE_UUID);
 
@@ -31,6 +31,7 @@ void setup() {
   while (!Serial) delay(10);
 
   myServo.attach(ServoPin);
+  pinMode(11, OUTPUT);
 
   Serial.println("nRF52832 BLE Peripheral");
 
@@ -47,17 +48,29 @@ void setup() {
 
   Serial.println("Setup complete, now advertising...");
 }
-
+float scaleFactor = 1.81 / 0.41;
+// float scaleFactor = 1;
 void send_battery_alert() {
       // Create a small string message
       char message[32];
       // snprintf(message, sizeof(message), "Hello #%lu", (unsigned long)counter++);
       // Send data for the battery consumption
-      float measuredvbat = analogRead(A7);
-      measuredvbat *= 2;    // we divided by 2, so multiply back
-      measuredvbat *= 3.3;  // Multiply by 3.3V, our reference voltage
-      measuredvbat /= 1024; // convert to voltage
-      snprintf(message, sizeof(message), "Battery = %0.2f", measuredvbat);
+      // float measuredvbat = analogRead(A0);
+      // measuredvbat *= 2;    // we divided by 2, so multiply back
+      // measuredvbat *= 3.3;  // Multiply by 3.3V, our reference voltage
+      // measuredvbat /= 1024; // convert to voltage
+      float measuredvbat; //= (float)analogRead(A1) * 3.3f / 4095.0f * scaleFactor;
+      float total = 0;
+      for (int i = 0; i < 10; i++) {
+        total += (float)analogRead(A1) * 3.3f / 4095.0f * scaleFactor;
+        delay(10);
+      }
+      measuredvbat = total / 10;
+      measuredvbat = 5;
+      Serial.print("Sent string: ");
+      Serial.println(measuredvbat);
+      
+      snprintf(message, sizeof(message), "%0.3f", measuredvbat);
       
       // Notify new value
       bool success = battery_life_char.notify((uint8_t*)message, strlen(message));
@@ -72,6 +85,7 @@ void send_battery_alert() {
 void loop() {
   send_battery_alert();
   delay(1000);
+  waitForEvent();
 }
 
 //--------------------------------------------------------------------
@@ -145,6 +159,22 @@ void moveServo(int angle) {
   myServo.detach();
 }
 
+// 
+void moveServoFromString(String message) {
+  if (message.equals("open")) {
+    moveServo(165);
+    digitalWrite(11, HIGH);
+  }
+  else if (message.equals("close")) {
+    moveServo(20);
+    digitalWrite(11, LOW);
+  }
+  else {
+    Serial.println("DBG: In moveServoFromString: Invalid String");
+  }
+
+}
+
 // functions that intakes data from the Vent Angle characteristic and adjusts the vent angle accordingly
 void writeCallback(uint16_t conn_hdl, BLECharacteristic* chr, uint8_t* data, uint16_t len) {
   String incomingMessage;
@@ -158,6 +188,8 @@ void writeCallback(uint16_t conn_hdl, BLECharacteristic* chr, uint8_t* data, uin
     moveServo(incomingMessage.toInt());
   }
   else {
-    Serial.println("INVALID INTEGER");
+    // Serial.println("INVALID INTEGER");
+    // Assumes that the incoming message is either "open" or "close"
+    moveServoFromString(incomingMessage);
   }
 }

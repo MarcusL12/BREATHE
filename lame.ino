@@ -123,11 +123,9 @@ String ventStatus = "OPEN";  // Default status is OPEN
 #define VENT_SERVICE_UUID         "12345678-1234-5678-1234-56789abcdef0"  // Replace with actual UUID
 #define VENT_CHARACTERISTIC_UUID  "abcdef01-1234-5678-1234-56789abcdef1"  // Replace with actual UUID
 #define BATTERY_LIFE_CHARACTERISTIC_UUID      "e540f441-a246-4072-b162-e2b67d4c7f57"
-
 static BLEUUID serviceUUID(VENT_SERVICE_UUID);
 static BLEUUID characteristicUUID(VENT_CHARACTERISTIC_UUID);
 static BLEUUID battery_life_UUID(BATTERY_LIFE_CHARACTERISTIC_UUID);
-
 
 static boolean doConnect = false;
 static boolean isConnected = false;
@@ -204,11 +202,6 @@ bool connectToServer() {
         pClient->disconnect();
         return false;
     }
-
-    // Enable notifications if available
-    if (ventCharacteristic->canNotify()) {
-        ventCharacteristic->registerForNotify(notifyCallback);
-    }    
 
     // Enable notifications if available
     if (batteryCharacteristic->canNotify()) {
@@ -740,7 +733,29 @@ void temp()
 }
 */
 
+
 // Function to read and display sensor data
+=======
+void checkBatteryAndTriggerBuzzer() {
+    // turn string into float
+    if (BatteryLife.equals("")) {
+      return;
+    }
+    float batteryLifeValue = BatteryLife.toFloat();  // Convert the battery life to float
+    
+    if (batteryLifeValue < 1.204) {
+        // Turn the buzzer on
+        analogWrite(BUZZER, 255);  // Adjust value if using PWM to control buzzer
+        Serial.println("Battery life is low, buzzer ON!");
+        Serial.println(BatteryLife);
+    } else {
+        // Turn the buzzer off
+        analogWrite(BUZZER, 0);  // Turn off buzzer
+        Serial.println("Battery life is sufficient, buzzer OFF.");
+        Serial.println(BatteryLife);
+    }
+}
+
 void displaySensorData() {
     static String lastVentStatus = "NONE"; // Track last vent state to prevent redundant messages
     static unsigned long lastVentCommandTime = 0; // Track last time a command was sent
@@ -947,7 +962,12 @@ void loop() {
   //temp();
   delay(100); // Reduce the delay for better responsiveness
   handleBluetooth();
+
   
+
+  checkBatteryAndTriggerBuzzer();
+ // Serial.println(BatteryLife);
+
 
 
   // See if there's any touch data for us
