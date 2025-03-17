@@ -6,6 +6,7 @@
 ************************************************************/
 
 //original spot 
+//most updated code as of 3/14/2025, 7:17
 
 #include <SPI.h>                          //include necessary libraries such as spi, i2c, and tft
 #include <TFT_eSPI.h>           
@@ -34,6 +35,23 @@
 
 #define CALIBRATION_FILE "/TouchCalData3" //for calibration files, not used
 #define REPEAT_CAL false
+//breakpoint 1
+#define LEDC_TIMER_12_BIT 12
+
+// use 5000 Hz as a LEDC base frequency
+#define LEDC_BASE_FREQ 5000
+
+#define BL_FREQ 10000
+
+// fade LED PIN (replace with LED_BUILTIN constant for built-in LED)
+#define LED_PIN 25
+
+//for low battery sound
+#define ONVALUE 200
+#define quarter_note_length 300
+#define NOTE_Ab NOTE_Gs
+
+
 
 //begin defining frame sizes 
 // Switch position and size
@@ -100,6 +118,7 @@ int PLUSBUTTON_X = PLUSBUTTON_X_ORIG;
 TFT_eSPI tft = TFT_eSPI();       // Invoke custom library
 TFT_eSprite sprite = TFT_eSprite(&tft);  // Create sprite object for text
 SensirionI2CScd4x scd4x;         // Create SCD4x sensor object
+DHT20 DHT;
 
 int currentValue = 70; // Initial value
 
@@ -133,6 +152,12 @@ static boolean doScan = false;
 static BLERemoteCharacteristic* ventCharacteristic = nullptr;
 static BLERemoteCharacteristic* batteryCharacteristic = nullptr;
 static BLEAdvertisedDevice* myDevice = nullptr;
+
+//breakpoint for testing co2 hysteresis 
+uint16_t co2Readings[5];
+bool triggerCO2 = false;
+bool actionTriggered = false; 
+int co2Index = 0;
 
 String BatteryLife = "";
 
@@ -269,6 +294,140 @@ void openVent() {
 void closeVent() {
     sendVentCommand("close");
 }
+
+//breakpoint 1000
+
+void ledcAnalogWrite(uint8_t pin, uint32_t value, uint32_t valueMax = 255) {
+  // calculate duty, 4095 from 2 ^ 12 - 1
+  uint32_t duty = (4095 / valueMax) * min(value, valueMax);
+
+  // write duty to LEDC
+  ledcWrite(pin, duty);
+}
+
+//for low battery sound:
+//-------------------------------------------------------------------//
+void restNote(int time) {
+  analogWrite(BUZZER, 0);
+  delay(time);
+  analogWrite(BUZZER, ONVALUE);
+}
+
+void playNote(note_t note, int timeLength, int octave) {
+  // play the note for 90% of the time then turn off for a little
+  ledcWriteNote(BUZZER, note, octave);
+  delay(timeLength * 0.9);
+  restNote(timeLength * 0.1);
+}
+
+void playNote_legato(note_t note, int timeLength, int octave) {
+  ledcWriteNote(BUZZER, note, octave);
+  delay(timeLength);
+}
+
+/*
+void lowBatteryCharm() {
+  // measure 1/2
+  for (int i = 0; i < 3; i++) {
+    playNote(NOTE_G, quarter_note_length / 2, 4);
+  }
+  playNote(NOTE_Eb, quarter_note_length * 3, 4);
+  // measure 3-5
+  restNote(quarter_note_length / 2);
+  for (int i = 0; i < 3; i++) {
+    playNote(NOTE_F, quarter_note_length / 2, 4);
+  }
+  playNote(NOTE_D, quarter_note_length * 3, 4);
+
+  // measure 6
+  restNote(quarter_note_length / 2);
+  for (int i = 0; i < 3; i++) {
+    playNote(NOTE_G, quarter_note_length / 2, 4);
+  }
+  // measure 7
+  playNote(NOTE_Eb, quarter_note_length / 2, 4);
+  for (int i = 0; i < 3; i++) {
+    playNote(NOTE_Ab, quarter_note_length / 2, 4);
+  }
+  //measure 8
+  playNote(NOTE_G, quarter_note_length / 2, 4);
+  for (int i = 0; i < 3; i++) {
+    playNote(NOTE_Eb, quarter_note_length / 2, 5);
+  }
+  // measure 9
+  playNote_legato(NOTE_C, quarter_note_length * 2, 5);
+  //measure 10
+  playNote(NOTE_C, quarter_note_length / 2, 5);
+  for (int i = 0; i < 3; i++) {
+    playNote(NOTE_G, quarter_note_length / 2, 4);
+  }
+
+  //measure 11
+  playNote(NOTE_D, quarter_note_length / 2, 4);
+  for (int i = 0; i < 3; i++) {
+    playNote(NOTE_Ab, quarter_note_length / 2, 4);
+  }
+
+  //measure 12
+  playNote(NOTE_G, quarter_note_length / 2, 4);
+  for (int i = 0; i < 3; i++) {
+    playNote(NOTE_F, quarter_note_length / 2, 5);
+  }
+
+  //measure 13
+  playNote(NOTE_D, quarter_note_length * 2, 5);
+  //measure 14
+  playNote(NOTE_D, quarter_note_length / 2, 5);
+  for (int i = 0; i < 2; i++) {
+    playNote(NOTE_G, quarter_note_length / 2, 5);
+  }
+  playNote(NOTE_F, quarter_note_length / 2, 5);
+
+  //measure 15
+  playNote(NOTE_Eb, quarter_note_length * 2, 5);
+
+  //measure 16
+  playNote(NOTE_D, quarter_note_length / 2, 5);
+  for (int i = 0; i < 2; i++) {
+    playNote(NOTE_G, quarter_note_length / 2, 5);
+  }
+  playNote(NOTE_F, quarter_note_length / 2, 5);
+
+  //measure 17
+  playNote(NOTE_Eb, quarter_note_length * 2, 5);
+
+  //measure 18
+  playNote(NOTE_D, quarter_note_length / 2, 5);
+  for (int i = 0; i < 2; i++) {
+    playNote(NOTE_G, quarter_note_length / 2, 5);
+  }
+  playNote(NOTE_F, quarter_note_length / 2, 5);
+
+  //measure 19
+  playNote(NOTE_Eb, quarter_note_length, 5);
+  restNote(quarter_note_length);
+
+  //measure 20
+  playNote(NOTE_C, quarter_note_length, 5);
+  restNote(quarter_note_length);
+
+  //measure 21
+  playNote(NOTE_G, quarter_note_length * 3, 5);
+
+  //measure 22
+  restNote(quarter_note_length / 2);
+  for (int i = 0; i < 3; i++) {
+    playNote(NOTE_Ab, quarter_note_length / 2, 5);
+  }
+
+  //measure 23
+  playNote(NOTE_F, quarter_note_length * 6, 5);
+
+  restNote(5000);
+}
+*/
+//-------------------------------------------------------------------//
+
 
 void handleBluetooth() {
     static bool wasConnected = false; // Tracks previous connection status
@@ -733,9 +892,6 @@ void temp()
 }
 */
 
-
-// Function to read and display sensor data
-=======
 void checkBatteryAndTriggerBuzzer() {
     // turn string into float
     if (BatteryLife.equals("")) {
@@ -743,97 +899,147 @@ void checkBatteryAndTriggerBuzzer() {
     }
     float batteryLifeValue = BatteryLife.toFloat();  // Convert the battery life to float
     
-    if (batteryLifeValue < 1.204) {
+    //breakpoint
+    //when battery is plugged in change to 1.20
+    if (batteryLifeValue < 1.20) {
         // Turn the buzzer on
-        analogWrite(BUZZER, 255);  // Adjust value if using PWM to control buzzer
-        Serial.println("Battery life is low, buzzer ON!");
-        Serial.println(BatteryLife);
+        //analogWrite(BUZZER, 100);  // Adjust value if using PWM to control buzzer
+        //lowBatteryCharm();
+        //Serial.println("Battery life is low, buzzer ON!");
+        //Serial.println(BatteryLife);
+        drawStatusBox(270, 275, "Low Battery!", TFT_RED);
     } else {
         // Turn the buzzer off
         analogWrite(BUZZER, 0);  // Turn off buzzer
-        Serial.println("Battery life is sufficient, buzzer OFF.");
-        Serial.println(BatteryLife);
+        //Serial.println("Battery life is sufficient, buzzer OFF.");
+        //Serial.println(BatteryLife);
+        drawStatusBox(270, 275, " ", 0x18c3);
     }
 }
 
+//breakpoint 
+
+unsigned long lastSensorReadTime = 0;  // Store last sensor read time
+const unsigned long sensorReadInterval = 2000;  // 2 seconds interval for both sensors
 void displaySensorData() {
-    static String lastVentStatus = "NONE"; // Track last vent state to prevent redundant messages
-    static unsigned long lastVentCommandTime = 0; // Track last time a command was sent
-    const unsigned long ventUpdateInterval = 30000; // 30 seconds interval
+    static unsigned long lastSensorReadTime = 0;  // To keep track of when to read the sensors again
+    unsigned long currentMillis = millis();  // Current time
 
-    uint16_t error;
-    char errorMessage[256];
+    // Only read the sensors every 2 seconds (adjust as necessary)
+    if (currentMillis - lastSensorReadTime >= sensorReadInterval) {
+        lastSensorReadTime = currentMillis;  // Update the last read time
 
-    uint16_t co2 = 0;
-    float temperature = 0.0f;
-    float humidity = 0.0f;
-    bool isDataReady = false;
+        // Declare and initialize temperatureF here to make it accessible globally in the function
+        float temperatureF = 0.0;
+        uint16_t co2 = 0;
+        float temperature = 0.0;
+        float humidity = 0.0;
 
-    error = scd4x.getDataReadyFlag(isDataReady);
-    if (error) {
-        Serial.print("Error trying to execute getDataReadyFlag(): ");
-        errorToString(error, errorMessage, 256);
-        Serial.println(errorMessage);
-        return;
-    }
+        // Read the DHT20 sensor (temperature and humidity)
+        int status = DHT.read();
+        if (status == DHT20_OK) {
+            float temperatureC = DHT.getTemperature();  // Read temperature in Celsius
+            temperatureF = (temperatureC * 9.0 / 5.0) + 32;  // Convert to Fahrenheit
+            humidity = DHT.getHumidity();  // Read humidity
 
-    if (isDataReady) {
-        error = scd4x.readMeasurement(co2, temperature, humidity);
+            // Display temperature on the screen
+            displayTemperature(temperatureF);  // Update the temperature display on the screen
+        } else {
+            Serial.println("DHT20 read failed.");
+        }
 
+        // Read the SCD4x CO2 sensor
+        uint16_t error;
+        bool isDataReady = false;
+        
+        error = scd4x.getDataReadyFlag(isDataReady);
         if (error) {
-            Serial.print("Error trying to execute readMeasurement(): ");
-            errorToString(error, errorMessage, 256);
-            Serial.println(errorMessage);
-        } 
-        else if (co2 == 0) {
-            Serial.println("Invalid sample detected, skipping.");
-        } 
-        else {
-            float temperatureF = (temperature * 9.0 / 5.0) + 32; // Convert to Fahrenheit
-            Serial.print("CO2: "); Serial.print(co2);
-            Serial.print("\tTemperature: "); Serial.print(temperatureF);
-            Serial.print(" °F\tHumidity: "); Serial.println(humidity);
+            Serial.print("Error trying to execute getDataReadyFlag(): ");
+            Serial.println(error);
+            return;
+        }
 
-            displayTemperature(temperatureF);
-            displayCO2(co2);
+        if (isDataReady) {
+            error = scd4x.readMeasurement(co2, temperature, humidity);
 
-            // CO2 alert
-            if (co2 > 1800) {
-                drawStatusBox(10, 275, "High CO2 LEVEL!", TFT_RED);
-                analogWrite(BUZZER, 100);
+            if (error) {
+                Serial.print("Error reading CO2 sensor: ");
+                Serial.println(error);
             } else {
-                drawStatusBox(10, 275, "Normal CO2 Levels :)", 0x18c3);
-                analogWrite(BUZZER, 0);
-            }
+                // Collect the last 5 CO2 readings and calculate the average
 
-            // **Vent Control Based on Set Temperature**
-            float thresholdHigh = currentValue + 2;
-            float thresholdLow = currentValue - 2;
+                displayCO2(co2);
+                co2Readings[co2Index] = co2;
+                co2Index = (co2Index + 1) % 5;
 
-            unsigned long currentMillis = millis();
-
-            // Only check every 30 seconds
-            if (currentMillis - lastVentCommandTime >= ventUpdateInterval) {
-                if (temperatureF > thresholdHigh && lastVentStatus != "OPEN") {
-                    openVent();
-                    ventStatus = "OPEN";
-                    lastVentStatus = "OPEN";
-                    lastVentCommandTime = currentMillis;
-                    Serial.println("✅ VENT OPENED: Temperature is above threshold.");
-                    drawVentStatus();
-                } 
-                else if (temperatureF < thresholdLow && lastVentStatus != "CLOSED") {
-                    closeVent();
-                    ventStatus = "CLOSED";
-                    lastVentStatus = "CLOSED";
-                    lastVentCommandTime = currentMillis;
-                    Serial.println("✅ VENT CLOSED: Temperature is below threshold.");
-                    drawVentStatus();
+                int totalCO2 = 0;
+                for (int i = 0; i < 5; i++) {
+                    totalCO2 += co2Readings[i];
                 }
+
+                // Calculate average CO2 reading
+                int avgCO2 = totalCO2 / 5;
+
+                // If the average CO2 level exceeds the threshold, trigger the alarm
+                if (avgCO2 > 1800) {
+                  if (!actionTriggered) {
+                      actionTriggered = true;
+                      drawStatusBox(10, 275, "High CO2 LEVEL!", TFT_RED);
+                      analogWrite(BUZZER, 100);
+                      /*
+                      for (int i = 4000; i <= 5500; i+=8) {
+                          ledcAnalogWrite(BUZZER, 200);
+                          ledcChangeFrequency(BUZZER, i, 12); // 1 khz, 12 bit resolution
+                          delayMicroseconds(8000);
+                      }
+                      */
+                  } 
+                } else {
+                    if (actionTriggered) {
+                        actionTriggered = false;
+                        drawStatusBox(10, 275, "Normal CO2 Levels :)", 0x18c3);  // Display normal CO2 message
+                        analogWrite(BUZZER, 0); // Turn off buzzer or LED
+                    }
+                }
+
+                // Print all data on the same line
+                Serial.print("CO2: ");
+                Serial.print(co2);
+                Serial.print("\tTemperature: ");
+                Serial.print(temperatureF);
+                Serial.print(" °F\tAvg CO2: ");
+                Serial.print(avgCO2);
+                Serial.print("\tVent: ");
+                Serial.println(ventStatus);  // Print the vent status
+            }
+        }
+
+        // Vent control based on temperature and CO2 thresholds
+        if (SwitchOn) {  // Autonomous mode - apply threshold logic
+            float thresholdHigh = currentValue + 2;
+            float thresholdLow = currentValue - 1;
+
+            // Use the temperatureF (Fahrenheit) value for comparison
+            if (temperatureF > thresholdHigh && ventStatus != "OPEN") {
+                openVent();
+                ventStatus = "OPEN";
+                drawVentStatus();
+                Serial.println("Above Threshold, FBI OPEN UP!");
+            } else if (temperatureF < thresholdLow && ventStatus != "CLOSED") {
+                closeVent();
+                ventStatus = "CLOSED";
+                drawVentStatus();
+                Serial.println("Below Threshold, Closing");
             }
         }
     }
 }
+
+
+
+
+
+
 
 
 
@@ -876,7 +1082,8 @@ void scanI2C() {
 
 void setup(void){ 
   print_pinout();
-  analogWrite(TFT_BL, 200);   //send a pwm signal to backlight pin
+  analogWrite(TFT_BL, 255);   //send a pwm signal to backlight pin
+  //digitalWrite(TFT_BL, HIGH);
   Serial.begin(115200);       //set baud rate 
   Serial.println("Starting Vent Control System...");
 
@@ -887,10 +1094,16 @@ void setup(void){
   tft.setRotation(1);         //set oritentation of screen contetns
   tft.fillScreen(0x0841);  //set screen background to black
 
+  //breakpoint 2
+    pinMode(BUZZER, OUTPUT);
+  // Setup timer with given frequency, resolution and attach it to a led pin with auto-selected channel
+  ledcAttach(BUZZER, LEDC_BASE_FREQ, LEDC_TIMER_12_BIT);
+  ledcAttach(TFT_BL, BL_FREQ, LEDC_TIMER_12_BIT);
   // Initialize SCD4x sensor
   Wire.begin();
   scd4x.begin(Wire);
   scanI2C();
+  DHT.begin();
 
       uint16_t error = scd4x.startPeriodicMeasurement();
     if (error) {
@@ -934,7 +1147,7 @@ void setup(void){
   //by default, initiliaze with autonomous mode
   greenBtn();  
   //drawGreenSquare();
-  pinMode(BUZZER, OUTPUT);
+  // pinMode(BUZZER, OUTPUT);
   drawValue();
   drawVentStatus();
 
@@ -954,7 +1167,7 @@ void setup(void){
 }
 
 void loop() {
- 
+  //lowBatteryCharm();
   uint16_t x, y;
   static unsigned long lastDebounceTime = 0;  // For debouncing
   unsigned long debounceDelay = 30;  // 50ms debounce time
@@ -962,12 +1175,8 @@ void loop() {
   //temp();
   delay(100); // Reduce the delay for better responsiveness
   handleBluetooth();
-
-  
-
   checkBatteryAndTriggerBuzzer();
  // Serial.println(BatteryLife);
-
 
 
   // See if there's any touch data for us
@@ -980,6 +1189,10 @@ void loop() {
       #ifdef BLACK_SPOT
         tft.fillCircle(x, y, 2, TFT_BLACK);
       #endif
+
+        
+
+  //breakpoint 5
 
 
       
@@ -1084,4 +1297,3 @@ void loop() {
 }
 
 //please work!
-
