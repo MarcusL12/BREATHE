@@ -140,8 +140,11 @@ static uint32_t custom_value_char_add(ble_cus_t * p_cus, const ble_cus_init_t * 
     ble_gatts_char_md_t char_md;
     ble_gatts_attr_md_t cccd_md;
     ble_gatts_attr_t    attr_char_value;
+    ble_gatts_attr_t    attr_char_battery_life_value;
     ble_uuid_t          ble_uuid;
+    ble_uuid_t          ble_battery_life_uuid;
     ble_gatts_attr_md_t attr_md;
+    ble_gatts_attr_md_t attr_battery_life_md;
 
     // Add Custom Value characteristic
     memset(&cccd_md, 0, sizeof(cccd_md));
@@ -167,6 +170,10 @@ static uint32_t custom_value_char_add(ble_cus_t * p_cus, const ble_cus_init_t * 
     ble_uuid.type = p_cus->uuid_type;
     ble_uuid.uuid = CUSTOM_VALUE_CHAR_UUID;
 
+    ble_battery_life_uuid.type = p_cus->uuid_type;
+    ble_battery_life_uuid.uuid = BATTERY_LIFE_CHAR_UUID;
+
+
     memset(&attr_md, 0, sizeof(attr_md));
 
     attr_md.read_perm  = p_cus_init->custom_value_char_attr_md.read_perm;
@@ -191,6 +198,30 @@ static uint32_t custom_value_char_add(ble_cus_t * p_cus, const ble_cus_init_t * 
     {
         return err_code;
     }
+
+    attr_battery_life_md.read_perm  = p_cus_init->custom_value_char_attr_md.read_perm;
+    attr_battery_life_md.write_perm = p_cus_init->custom_value_char_attr_md.write_perm;
+    attr_battery_life_md.vloc       = BLE_GATTS_VLOC_STACK;
+    attr_battery_life_md.rd_auth    = 0;
+    attr_battery_life_md.wr_auth    = 0;
+    attr_battery_life_md.vlen       = 0;
+
+    memset(&attr_char_battery_life_value, 0, sizeof(attr_char_battery_life_value));
+
+    attr_char_battery_life_value.p_uuid    = &ble_battery_life_uuid;
+    attr_char_battery_life_value.p_attr_md = &attr_battery_life_md;
+    attr_char_battery_life_value.init_len  = sizeof(uint8_t);
+    attr_char_battery_life_value.init_offs = 0;
+    attr_char_battery_life_value.max_len = sizeof(uint8_t);
+
+    err_code = sd_ble_gatts_characteristic_add(p_cus->service_handle, &char_md,
+                                               &attr_char_battery_life_value,
+                                               &p_cus->custom_value_handles);
+
+    if (err_code != NRF_SUCCESS)
+    {
+        return err_code;
+    }                                            
 
     return NRF_SUCCESS;
 }

@@ -20,12 +20,16 @@ NRF_SDH_BLE_OBSERVER(_name ## _obs,                                             
 
 
 // CUSTOM_SERVICE_UUID_BASE f364adc9-b000-4042-ba50-05ca45bf8abc
+// Changing to 12345678-1234-5678-1234-56789abcdef0
+#define CUSTOM_SERVICE_UUID_BASE         {0xF0, 0xDE, 0xBC, 0x9A, 0x78, 0x56, 0x34, 0x12, \
+                                            0x78, 0x56, 0x34, 0x12, 0x78, 0x56, 0x34, 0x12}
 
-#define CUSTOM_SERVICE_UUID_BASE         {0xBC, 0x8A, 0xBF, 0x45, 0xCA, 0x05, 0x50, 0xBA, \
-                                          0x40, 0x42, 0xB0, 0x00, 0xC9, 0xAD, 0x64, 0xF3}
+#define CUSTOM_SERVICE_UUID               0x5678
+// Vent angle characteristic 12345678-4209-5678-1234-56789abcdef0
+#define CUSTOM_VALUE_CHAR_UUID            0x4209
 
-#define CUSTOM_SERVICE_UUID               0x1400
-#define CUSTOM_VALUE_CHAR_UUID            0x1401
+// Battery life characteristic 12345678-9823-5678-1234-56789abcdef0
+#define BATTERY_LIFE_CHAR_UUID            0x9823
 																					
 /**@brief Custom Service event type. */
 typedef enum
