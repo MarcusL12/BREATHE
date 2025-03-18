@@ -140,8 +140,8 @@ int valueY = PLUSBUTTON_Y + BUTTON_HEIGHT + 50;  // Keep the same Y position
 String ventStatus = "OPEN";  // Default status is OPEN
 
 #define VENT_SERVICE_UUID         "12345678-1234-5678-1234-56789abcdef0"  // Replace with actual UUID
-#define VENT_CHARACTERISTIC_UUID  "abcdef01-1234-5678-1234-56789abcdef1"  // Replace with actual UUID
-#define BATTERY_LIFE_CHARACTERISTIC_UUID      "e540f441-a246-4072-b162-e2b67d4c7f57"
+#define VENT_CHARACTERISTIC_UUID  "12344209-1234-5678-1234-56789abcdef0"  // Replace with actual UUID
+#define BATTERY_LIFE_CHARACTERISTIC_UUID      "12349823-1234-5678-1234-56789abcdef0"
 static BLEUUID serviceUUID(VENT_SERVICE_UUID);
 static BLEUUID characteristicUUID(VENT_CHARACTERISTIC_UUID);
 static BLEUUID battery_life_UUID(BATTERY_LIFE_CHARACTERISTIC_UUID);
