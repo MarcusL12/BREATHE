@@ -8,6 +8,8 @@
 "Output/Debug/Obj/pwm_library_pca10040/app_util_platform.o"
 "Output/Debug/Obj/pwm_library_pca10040/nrf_assert.o"
 "Output/Debug/Obj/pwm_library_pca10040/nrf_strerror.o"
+"Output/Debug/Obj/pwm_library_pca10040/nrf_pwr_mgmt.o"
+"Output/Debug/Obj/pwm_library_pca10040/nrf_section_iter.o"
 "Output/Debug/Obj/pwm_library_pca10040/nrf_drv_ppi.o"
 "Output/Debug/Obj/pwm_library_pca10040/nrf_nvic.o"
 "Output/Debug/Obj/pwm_library_pca10040/nrf_soc.o"

@@ -56,6 +56,7 @@
 #include "bsp.h"
 #include "nrf_delay.h"
 #include "app_pwm.h"
+#include "nrf_pwr_mgmt.h"
 
 APP_PWM_INSTANCE(PWM1,1);                   // Create the instance "PWM1" using TIMER1.
 
@@ -66,6 +67,15 @@ static volatile bool ready_flag;            // A flag indicating PWM status.
 void pwm_ready_callback(uint32_t pwm_id)    // PWM callback function
 {
     ready_flag = true;
+}
+
+/**@brief Function for initializing power management.
+ */
+static void power_management_init(void)
+{
+    ret_code_t err_code;
+    err_code = nrf_pwr_mgmt_init();
+    APP_ERROR_CHECK(err_code);
 }
 
 void enable_pwm() 
@@ -100,6 +110,7 @@ void motor_switch_disable() {
 int main(void)
 {
     ret_code_t err_code;
+    power_management_init();
 
     /* Initialize and enable PWM. */
     // err_code = app_pwm_init(&PWM1,&pwm1_cfg,pwm_ready_callback);
