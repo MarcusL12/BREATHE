@@ -981,18 +981,18 @@ void displaySensorData() {
                 int avgCO2 = totalCO2 / 5;
 
                 // If the average CO2 level exceeds the threshold, trigger the alarm
-                if (avgCO2 > 1800) {
+                if (co2 > 1800) {
                   if (!actionTriggered) {
                       actionTriggered = true;
                       drawStatusBox(10, 275, "High CO2 LEVEL!", TFT_RED);
                       analogWrite(BUZZER, 100);
-                      /*
+                      
                       for (int i = 4000; i <= 5500; i+=8) {
                           ledcAnalogWrite(BUZZER, 200);
                           ledcChangeFrequency(BUZZER, i, 12); // 1 khz, 12 bit resolution
                           delayMicroseconds(8000);
                       }
-                      */
+                      
                   } 
                 } else {
                     if (actionTriggered) {
@@ -1097,8 +1097,9 @@ void setup(void){
   //breakpoint 2
     pinMode(BUZZER, OUTPUT);
   // Setup timer with given frequency, resolution and attach it to a led pin with auto-selected channel
-  ledcAttach(BUZZER, LEDC_BASE_FREQ, LEDC_TIMER_12_BIT);
-  ledcAttach(TFT_BL, BL_FREQ, LEDC_TIMER_12_BIT);
+
+  // ledcAttach(BUZZER, LEDC_BASE_FREQ, LEDC_TIMER_12_BIT);
+  ledcAttach(TFT_BL, BL_FREQ, 20);
   // Initialize SCD4x sensor
   Wire.begin();
   scd4x.begin(Wire);
