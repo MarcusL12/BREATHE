@@ -86,6 +86,12 @@
 #include "nrf_delay.h"
 #include "app_pwm.h"
 // #include "motor_control.h"
+#include <stdio.h>
+#include "boards.h"
+#include "nrf_drv_clock.h"
+#include "nrf_drv_saadc.h"
+#include "nrf_saadc.h"
+#include "nrf_gpio.h"
 
 #define DEVICE_NAME                     "nordic"                       /**< Name of device. Will be included in the advertising data. */
 #define MANUFACTURER_NAME               "NordicSemiconductor"                   /**< Manufacturer. Will be passed to Device Information Service. */
@@ -118,6 +124,7 @@
 #define DEAD_BEEF                       0xDEADBEEF                              /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
 
 
+
 NRF_BLE_GATT_DEF(m_gatt);
 NRF_BLE_QWR_DEF(m_qwr);                                                         /**< GATT module instance. */
 BLE_CUS_DEF(m_cus);                                                             /**< Context for the Queued Write module.*/
@@ -128,7 +135,93 @@ APP_TIMER_DEF(m_notification_timer_id);
 static uint8_t m_custom_value = 0;
 
 static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                        /**< Handle of the current connection. */
+/* Set up for the SAADC */
+// Number of samples to take in one burst
+#define NUM_SAMPLES 5
 
+// Timer interval (in ticks)
+#define SAADC_SAMPLE_INTERVAL APP_TIMER_TICKS(10000) 
+
+APP_TIMER_DEF(m_saadc_timer_id);
+
+static float m_saadc_average = 0.0f;
+
+static nrf_saadc_value_t m_buffer[NUM_SAMPLES];
+
+static void saadc_timer_handler(void *p_context)
+{
+    UNUSED_PARAMETER(p_context);
+
+    // Collect 5 samples in quick succession.
+    // The SAADC driver will not call our callback until
+    // all 5 samples are acquired, because we gave it a buffer
+    // of size 5 and called sample 5 times.
+    for (int i = 0; i < NUM_SAMPLES; i++)
+    {
+        ret_code_t err_code = nrf_drv_saadc_sample();
+        APP_ERROR_CHECK(err_code);
+    }
+}
+
+static void saadc_callback(nrf_drv_saadc_evt_t const * p_event)
+{
+    if (p_event->type == NRF_DRV_SAADC_EVT_DONE)
+    {
+        // The buffer should have 5 fresh samples in it
+        // because we called nrf_drv_saadc_sample() 5 times.
+        float sum = 0.0f;
+        for (int i = 0; i < NUM_SAMPLES; i++)
+        {
+            // Convert raw reading to something meaningful.
+            // Example: scaled_voltage = (raw_value * 3.6f) / 1023, etc.
+            // Adjust the calculation for your resolution, gain, reference, etc.
+            //
+            // For a 14-bit SAADC reading: 0..16383
+            // For a 12-bit SAADC reading: 0..4095 (if you reconfigure resolution)
+            //
+            // This is just an example scale factor; modify as needed.
+            float scaled_value = ((float)(p_event->data.done.p_buffer[i]) * 232.21f) / 65535.0f;
+            sum += scaled_value;
+        }
+        m_saadc_average = sum / (float)NUM_SAMPLES;
+
+        // Example usage: turn GPIO pin on or off depending on average
+        nrf_gpio_cfg_output(7);
+        if (m_saadc_average >= 1.8f)
+        {
+            nrf_gpio_pin_set(7);
+        }
+        else
+        {
+            nrf_gpio_pin_clear(7);
+        }
+
+        // Reuse this buffer for the next burst of 5 samples
+        ret_code_t err_code = nrf_drv_saadc_buffer_convert(p_event->data.done.p_buffer, NUM_SAMPLES);
+        APP_ERROR_CHECK(err_code);
+    }
+}
+
+static void saadc_init(void)
+{
+    ret_code_t err_code;
+
+    // Initialize the SAADC driver
+    err_code = nrf_drv_saadc_init(NULL, saadc_callback);
+    APP_ERROR_CHECK(err_code);
+
+    // Configure SAADC channel 0 for single-ended on AIN0
+    // Adjust gain, ref, acquisition time as needed
+    nrf_saadc_channel_config_t channel_config =
+        NRF_DRV_SAADC_DEFAULT_CHANNEL_CONFIG_SE(NRF_SAADC_INPUT_AIN0);
+
+    err_code = nrf_drv_saadc_channel_init(0, &channel_config);
+    APP_ERROR_CHECK(err_code);
+
+    // Give the SAADC driver a buffer of size 5
+    err_code = nrf_drv_saadc_buffer_convert(m_buffer, NUM_SAMPLES);
+    APP_ERROR_CHECK(err_code);
+}
 
 /* Setup for the Servo motor */
 APP_PWM_INSTANCE(PWM1,1);                   // Create the instance "PWM1" using TIMER1.
@@ -389,6 +482,10 @@ static void timers_init(void)
     err_code = app_timer_create(&m_notification_timer_id, APP_TIMER_MODE_REPEATED, notification_timeout_handler);
     APP_ERROR_CHECK(err_code);
 
+    err_code = nrf_drv_clock_init();
+    APP_ERROR_CHECK(err_code);
+    nrf_drv_clock_lfclk_request(NULL);
+
     /* YOUR_JOB: Create any timers to be used by the application.
                  Below is an example of how to create a timer.
                  For every new timer needed, increase the value of the macro APP_TIMER_MAX_TIMERS by
@@ -398,6 +495,19 @@ static void timers_init(void)
        APP_ERROR_CHECK(err_code); */
 }
 
+static void timer_create_and_start(void)
+{
+    ret_code_t err_code;
+
+    err_code = app_timer_create(&m_saadc_timer_id,
+                                APP_TIMER_MODE_REPEATED,
+                                saadc_timer_handler);
+    APP_ERROR_CHECK(err_code);
+
+    // Start the timer (e.g., 5 minutes)
+    err_code = app_timer_start(m_saadc_timer_id, SAADC_SAMPLE_INTERVAL, NULL);
+    APP_ERROR_CHECK(err_code);
+}
 
 /**@brief Function for the GAP initialization.
  *
@@ -975,6 +1085,8 @@ int main(void)
     conn_params_init();
     peer_manager_init();
 
+    saadc_init();
+    timer_create_and_start();
     // Start execution.
     NRF_LOG_INFO("Template example started.");
     application_timers_start();
