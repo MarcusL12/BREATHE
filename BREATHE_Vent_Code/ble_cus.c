@@ -67,13 +67,13 @@ static void on_write(ble_cus_t * p_cus, ble_evt_t const * p_ble_evt)
         if(strcmp(message_bus, "CLOSE") == 0)
         {   
             // nrf_gpio_pin_clear(25); 
-            move_vent(0);
+            move_vent(2);
             sprintf(message_bus, "GOT:CLOSE");
         }
         else if(strcmp(message_bus, "OPEN") == 0)
         {
             // nrf_gpio_pin_set(25); 
-            move_vent(180); 
+            move_vent(70); 
             sprintf(message_bus, "GOT:OPEN");
         }
         else
