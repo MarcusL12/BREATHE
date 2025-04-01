@@ -46,6 +46,12 @@
  #ifdef USE_APP_CONFIG
  #include "app_config.h"
  #endif
+ /*     Marcus Editing    */
+ #ifndef NRFX_SAADC_DEFAULT_CONFIG_IRQ_PRIORITY
+ #define NRFX_SAADC_DEFAULT_CONFIG_IRQ_PRIORITY 7
+ #endif
+ 
+ /* End of Marcus Editing */
  // <h> Board Support 
  
  //==========================================================
