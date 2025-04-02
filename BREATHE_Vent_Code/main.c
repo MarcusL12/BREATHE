@@ -136,12 +136,14 @@ static uint8_t m_custom_value = 0;
 
 static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                        /**< Handle of the current connection. */
 
+bool Send_Raw_ADC = true;
+
 /* Setup for SAADC */
 
 // Number of samples to take in one burst
-#define NUM_SAMPLES 5
+#define NUM_SAMPLES 1
 // Timer interval (in ticks), e.g., 300000 ms for 5 minutes
-#define SAADC_SAMPLE_INTERVAL APP_TIMER_TICKS(2000) 
+#define SAADC_SAMPLE_INTERVAL APP_TIMER_TICKS(5000 / NUM_SAMPLES) 
 
 APP_TIMER_DEF(m_saadc_timer_id);
 
@@ -149,7 +151,7 @@ APP_TIMER_DEF(m_saadc_timer_id);
 static nrf_saadc_value_t m_buffer[NUM_SAMPLES];
 
 // Global variable to store the average reading
-static float m_saadc_average = 0.0f;
+static float m_saadc_average = 0.0;
 
 static void saadc_timer_handler(void *p_context)
 {
@@ -166,8 +168,81 @@ static void saadc_timer_handler(void *p_context)
     }
 }
 
+// Converts a float to a string with a fixed 2-decimal precision.
+void convert_float_to_string(float num, char *str) {
+    // extract the first two digits past the decimal point
+    int buff_int;
+    int whole_numbers = (int)num;
+    float decimal_points = num - whole_numbers;
+    int i=0;
+    int buf [15];
+    
+    while (whole_numbers > 0) {
+        buf[i] = whole_numbers % 10;
+        printf("buf[%d] = %d\n", i, buf[i]);
+        whole_numbers = whole_numbers / 10;
+        i++;
+    }
+    
+    int temp = i, j = 0;
+    for (int i = temp-1; i >= 0; i--) {
+        str[j] = buf[i] + '0';
+        j++;
+    }
+    
+    str[j] = '.';
+    j++;
+    for(int i = 0; i < 2; i++) {
+        str[j] = (decimal_points * 10) + '0';
+        decimal_points = decimal_points * 10;
+        decimal_points = decimal_points - (int)decimal_points;
+        printf("str[%d] = %c\n", j, str[j]);
+        j++;
+    }
+}
+
+void convert_raw_adc_to_string (float num, char *str) {
+    int adc_value = (int)num;
+    if (adc_value <= 0) return;
+    int i = 0;
+    int buf[16];
+    buf [0] = adc_value % 10;
+    while (adc_value > 0) 
+    {
+        buf[i] = adc_value % 10;
+        adc_value = adc_value / 10;
+        i++;
+    }
+    int j = 0;
+    for (i = i - 1; i >= 0; i--) {
+        str[j] = buf[i] + '0';
+        j++;
+    }
+    str[j] = '\0';
+}
+
 static void saadc_callback(nrf_drv_saadc_evt_t const * p_event)
 {
+    char battery_life[16] = "test";
+    if (Send_Raw_ADC && p_event->type == NRF_DRV_SAADC_EVT_DONE) 
+    {
+        float raw_adc_value = 0, sum = 0;
+        for (int i = 0; i < NUM_SAMPLES; i++)
+        {
+            raw_adc_value = (float)(p_event->data.done.p_buffer[i]);
+            sum += raw_adc_value;
+        }
+        sum = sum / (float)NUM_SAMPLES;
+        convert_raw_adc_to_string(sum, battery_life);
+
+        // Reuse this buffer for the next burst of NUM_SAMPLES
+        ret_code_t err_code = nrf_drv_saadc_buffer_convert(p_event->data.done.p_buffer, NUM_SAMPLES);
+        APP_ERROR_CHECK(err_code);
+
+        err_code = ble_cus_batterylife_update(&m_cus, battery_life, 10);
+        APP_ERROR_CHECK(err_code);
+        return;
+    }
     if (p_event->type == NRF_DRV_SAADC_EVT_DONE)
     {
         // The buffer should have 5 fresh samples in it
@@ -175,14 +250,6 @@ static void saadc_callback(nrf_drv_saadc_evt_t const * p_event)
         float sum = 0.0f;
         for (int i = 0; i < NUM_SAMPLES; i++)
         {
-            // Convert raw reading to something meaningful.
-            // Example: scaled_voltage = (raw_value * 3.6f) / 1023, etc.
-            // Adjust the calculation for your resolution, gain, reference, etc.
-            //
-            // For a 14-bit SAADC reading: 0..16383
-            // For a 12-bit SAADC reading: 0..4095 (if you reconfigure resolution)
-            //
-            // This is just an example scale factor; modify as needed.
             float scaled_value = ((float)(p_event->data.done.p_buffer[i]) * 232.21f) / 65535.0f;
             sum += scaled_value;
         }
@@ -199,8 +266,16 @@ static void saadc_callback(nrf_drv_saadc_evt_t const * p_event)
             nrf_gpio_pin_clear(7);
         }
 
-        // Reuse this buffer for the next burst of 5 samples
+        // Reuse this buffer for the next burst of NUM_SAMPLES
         ret_code_t err_code = nrf_drv_saadc_buffer_convert(p_event->data.done.p_buffer, NUM_SAMPLES);
+        APP_ERROR_CHECK(err_code);
+
+        // convert the data into a string
+        // snprintf(battery_life, sizeof(battery_life), "%.2f", m_saadc_average);
+        // sprintf(battery_life, sizeof(battery_life, "%.2f", m_saadc_average));
+        convert_float_to_string(m_saadc_average, battery_life);
+        // Send the data over
+        err_code = ble_cus_batterylife_update(&m_cus, battery_life, 5);
         APP_ERROR_CHECK(err_code);
     }
 }
