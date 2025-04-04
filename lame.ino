@@ -141,6 +141,9 @@ const int squareSize = 30; // Square size
 int valueX = PLUSBUTTON_X - 42 + (FRAME_W / 2);  // Initial X position
 int valueY = PLUSBUTTON_Y + BUTTON_HEIGHT + 50;  // Keep the same Y position
 
+//song
+int song_pt;
+
 String ventStatus = "OPEN";  // Default status is OPEN
 
 #define VENT_SERVICE_UUID         "12345678-1234-5678-1234-56789abcdef0"  // Replace with actual UUID
@@ -201,6 +204,160 @@ void lowBatteryCharmLoop() {
 
   }
 }
+
+void low_power_song_pt1 () {
+  restNote(quarter_note_length / 2);
+  // measure 1/2
+  for (int i = 0; i < 3; i++) {
+    playNote(NOTE_G, quarter_note_length / 2, 4);
+  }
+}
+
+void low_power_song_pt2 () {
+  // measure 2
+    playNote(NOTE_Eb, quarter_note_length * 3, 4);
+}
+
+void low_power_song_pt3 () {
+  // measure 3
+  restNote(quarter_note_length / 2);
+}
+
+void low_power_song_pt4 () {
+  // measure 4
+    for (int i = 0; i < 3; i++) {
+    playNote(NOTE_F, quarter_note_length / 2, 4);
+  }
+}
+
+void low_power_song_pt5 () {
+  // measure 5
+  playNote(NOTE_D, quarter_note_length * 3, 4);
+}
+
+void low_power_song_pt6 () {
+   // measure 6
+  restNote(quarter_note_length / 2);
+  for (int i = 0; i < 3; i++) {
+    playNote(NOTE_G, quarter_note_length / 2, 4);
+  }
+}
+
+void low_power_song_pt7 () {
+    // measure 7
+  playNote(NOTE_Eb, quarter_note_length / 2, 4);
+  for (int i = 0; i < 3; i++) {
+    playNote(NOTE_Ab, quarter_note_length / 2, 4);
+  }
+}
+
+void low_power_song_pt8 () {
+    //measure 8
+  playNote(NOTE_G, quarter_note_length / 2, 4);
+  for (int i = 0; i < 3; i++) {
+    playNote(NOTE_Eb, quarter_note_length / 2, 5);
+  }
+}
+
+void low_power_song_pt9 () {
+    // measure 9
+  playNote_legato(NOTE_C, quarter_note_length * 2, 5);
+}
+
+void low_power_song_pt10 () {
+    //measure 10
+  playNote(NOTE_C, quarter_note_length / 2, 5);
+  for (int i = 0; i < 3; i++) {
+    playNote(NOTE_G, quarter_note_length / 2, 4);
+  }
+}
+
+void low_power_song_pt11 () {
+    //measure 11
+  playNote(NOTE_D, quarter_note_length / 2, 4);
+  for (int i = 0; i < 3; i++) {
+    playNote(NOTE_Ab, quarter_note_length / 2, 4);
+  }
+}
+
+void low_power_song_pt12 () {
+    //measure 12
+  playNote(NOTE_G, quarter_note_length / 2, 4);
+  for (int i = 0; i < 3; i++) {
+    playNote(NOTE_F, quarter_note_length / 2, 5);
+  }
+}
+
+void low_power_song_pt13 () {
+    //measure 13
+  playNote(NOTE_D, quarter_note_length * 2, 5);
+}
+
+void low_power_song_pt14 () {
+  playNote(NOTE_D, quarter_note_length / 2, 5);
+  for (int i = 0; i < 2; i++) {
+    playNote(NOTE_G, quarter_note_length / 2, 5);
+  }
+  playNote(NOTE_F, quarter_note_length / 2, 5);
+}
+
+void low_power_song_pt15 () {
+    //measure 15
+  playNote(NOTE_Eb, quarter_note_length * 2, 5);
+}
+
+void low_power_song_pt16 () {
+    //measure 16
+  playNote(NOTE_D, quarter_note_length / 2, 5);
+  for (int i = 0; i < 2; i++) {
+    playNote(NOTE_G, quarter_note_length / 2, 5);
+  }
+}
+
+void low_power_song_pt17 () {
+    //measure 17
+  playNote(NOTE_Eb, quarter_note_length * 2, 5);
+}
+
+void low_power_song_pt18 () {
+    //measure 18
+  playNote(NOTE_D, quarter_note_length / 2, 5);
+  for (int i = 0; i < 2; i++) {
+    playNote(NOTE_G, quarter_note_length / 2, 5);
+  }
+  playNote(NOTE_F, quarter_note_length / 2, 5);
+}
+
+void low_power_song_pt19 () {
+    //measure 19
+  playNote(NOTE_Eb, quarter_note_length, 5);
+  restNote(quarter_note_length);
+}
+
+void low_power_song_pt20 () {
+    //measure 20
+  playNote(NOTE_C, quarter_note_length, 5);
+  restNote(quarter_note_length);
+}
+
+void low_power_song_pt21 () {
+    //measure 21
+  playNote(NOTE_G, quarter_note_length * 3, 5);
+}
+
+void low_power_song_pt22 () {
+    //measure 22
+  restNote(quarter_note_length / 2);
+  for (int i = 0; i < 3; i++) {
+    playNote(NOTE_Ab, quarter_note_length / 2, 5);
+  }
+}
+
+void low_power_song_pt23 () {
+    //measure 23
+  playNote(NOTE_F, quarter_note_length * 6, 5);
+}
+
 
 void lame(){
     if (!newDataReceived) {
@@ -493,7 +650,114 @@ void playNote_legato(note_t note, int timeLength, int octave) {
   delay(timeLength);
 }
 
+
+void lowBatteryCharm() {
+  uint16_t x, y;
+  // measure 1/2
+  for (int i = 0; i < 3; i++) {
+    playNote(NOTE_G, quarter_note_length / 2, 4);
+  }
+  playNote(NOTE_Eb, quarter_note_length * 3, 4);
+  // measure 3-5
+  restNote(quarter_note_length / 2);
+  for (int i = 0; i < 3; i++) {
+    playNote(NOTE_F, quarter_note_length / 2, 4);
+  }
+  playNote(NOTE_D, quarter_note_length * 3, 4);
+
+  // measure 6
+  restNote(quarter_note_length / 2);
+  for (int i = 0; i < 3; i++) {
+    playNote(NOTE_G, quarter_note_length / 2, 4);
+  }
+  // measure 7
+  playNote(NOTE_Eb, quarter_note_length / 2, 4);
+  for (int i = 0; i < 3; i++) {
+    playNote(NOTE_Ab, quarter_note_length / 2, 4);
+  }
+  //measure 8
+  playNote(NOTE_G, quarter_note_length / 2, 4);
+  for (int i = 0; i < 3; i++) {
+    playNote(NOTE_Eb, quarter_note_length / 2, 5);
+  }
+  // measure 9
+  playNote_legato(NOTE_C, quarter_note_length * 2, 5);
+  //measure 10
+  playNote(NOTE_C, quarter_note_length / 2, 5);
+  for (int i = 0; i < 3; i++) {
+    playNote(NOTE_G, quarter_note_length / 2, 4);
+  }
+
+  //measure 11
+  playNote(NOTE_D, quarter_note_length / 2, 4);
+  for (int i = 0; i < 3; i++) {
+    playNote(NOTE_Ab, quarter_note_length / 2, 4);
+  }
+
+  //measure 12
+  playNote(NOTE_G, quarter_note_length / 2, 4);
+  for (int i = 0; i < 3; i++) {
+    playNote(NOTE_F, quarter_note_length / 2, 5);
+  }
+
+  //measure 13
+  playNote(NOTE_D, quarter_note_length * 2, 5);
+  //measure 14
+  playNote(NOTE_D, quarter_note_length / 2, 5);
+  for (int i = 0; i < 2; i++) {
+    playNote(NOTE_G, quarter_note_length / 2, 5);
+  }
+  playNote(NOTE_F, quarter_note_length / 2, 5);
+
+  //measure 15
+  playNote(NOTE_Eb, quarter_note_length * 2, 5);
+
+  //measure 16
+  playNote(NOTE_D, quarter_note_length / 2, 5);
+  for (int i = 0; i < 2; i++) {
+    playNote(NOTE_G, quarter_note_length / 2, 5);
+  }
+  playNote(NOTE_F, quarter_note_length / 2, 5);
+
+  //measure 17
+  playNote(NOTE_Eb, quarter_note_length * 2, 5);
+
+  //measure 18
+  playNote(NOTE_D, quarter_note_length / 2, 5);
+  for (int i = 0; i < 2; i++) {
+    playNote(NOTE_G, quarter_note_length / 2, 5);
+  }
+  playNote(NOTE_F, quarter_note_length / 2, 5);
+
+  //measure 19
+  playNote(NOTE_Eb, quarter_note_length, 5);
+  restNote(quarter_note_length);
+
+  //measure 20
+  playNote(NOTE_C, quarter_note_length, 5);
+  restNote(quarter_note_length);
+
+  //measure 21
+  playNote(NOTE_G, quarter_note_length * 3, 5);
+
+  //measure 22
+  restNote(quarter_note_length / 2);
+  for (int i = 0; i < 3; i++) {
+    playNote(NOTE_Ab, quarter_note_length / 2, 5);
+  }
+
+  //measure 23
+  playNote(NOTE_F, quarter_note_length * 6, 5);
+
+  restNote(50);
+
+  if (tft.getTouch(&x, &y)){
+    return;
+  }
+}
+
 //-------------------------------------------------------------------//
+
 
 void handleBluetooth() {
     static bool wasConnected = false; // Tracks previous connection status
@@ -1253,160 +1517,6 @@ void lowBatteryNotification() {
 
 }
 
-void low_power_song_pt1 () {
-  restNote(quarter_note_length / 2);
-  // measure 1/2
-  for (int i = 0; i < 3; i++) {
-    playNote(NOTE_G, quarter_note_length / 2, 4);
-  }
-}
-
-void low_power_song_pt2 () {
-  // measure 2
-    playNote(NOTE_Eb, quarter_note_length * 3, 4);
-}
-
-void low_power_song_pt3 () {
-  // measure 3
-  restNote(quarter_note_length / 2);
-}
-
-void low_power_song_pt4 () {
-  // measure 4
-    for (int i = 0; i < 3; i++) {
-    playNote(NOTE_F, quarter_note_length / 2, 4);
-  }
-}
-
-void low_power_song_pt5 () {
-  // measure 5
-  playNote(NOTE_D, quarter_note_length * 3, 4);
-}
-
-void low_power_song_pt6 () {
-   // measure 6
-  restNote(quarter_note_length / 2);
-  for (int i = 0; i < 3; i++) {
-    playNote(NOTE_G, quarter_note_length / 2, 4);
-  }
-}
-
-void low_power_song_pt7 () {
-    // measure 7
-  playNote(NOTE_Eb, quarter_note_length / 2, 4);
-  for (int i = 0; i < 3; i++) {
-    playNote(NOTE_Ab, quarter_note_length / 2, 4);
-  }
-}
-
-void low_power_song_pt8 () {
-    //measure 8
-  playNote(NOTE_G, quarter_note_length / 2, 4);
-  for (int i = 0; i < 3; i++) {
-    playNote(NOTE_Eb, quarter_note_length / 2, 5);
-  }
-}
-
-void low_power_song_pt9 () {
-    // measure 9
-  playNote_legato(NOTE_C, quarter_note_length * 2, 5);
-}
-
-void low_power_song_pt10 () {
-    //measure 10
-  playNote(NOTE_C, quarter_note_length / 2, 5);
-  for (int i = 0; i < 3; i++) {
-    playNote(NOTE_G, quarter_note_length / 2, 4);
-  }
-}
-
-void low_power_song_pt11 () {
-    //measure 11
-  playNote(NOTE_D, quarter_note_length / 2, 4);
-  for (int i = 0; i < 3; i++) {
-    playNote(NOTE_Ab, quarter_note_length / 2, 4);
-  }
-}
-
-void low_power_song_pt12 () {
-    //measure 12
-  playNote(NOTE_G, quarter_note_length / 2, 4);
-  for (int i = 0; i < 3; i++) {
-    playNote(NOTE_F, quarter_note_length / 2, 5);
-  }
-}
-
-void low_power_song_pt13 () {
-    //measure 13
-  playNote(NOTE_D, quarter_note_length * 2, 5);
-}
-
-void low_power_song_pt14 () {
-  playNote(NOTE_D, quarter_note_length / 2, 5);
-  for (int i = 0; i < 2; i++) {
-    playNote(NOTE_G, quarter_note_length / 2, 5);
-  }
-  playNote(NOTE_F, quarter_note_length / 2, 5);
-}
-
-void low_power_song_pt15 () {
-    //measure 15
-  playNote(NOTE_Eb, quarter_note_length * 2, 5);
-}
-
-void low_power_song_pt16 () {
-    //measure 16
-  playNote(NOTE_D, quarter_note_length / 2, 5);
-  for (int i = 0; i < 2; i++) {
-    playNote(NOTE_G, quarter_note_length / 2, 5);
-  }
-}
-
-void low_power_song_pt17 () {
-    //measure 17
-  playNote(NOTE_Eb, quarter_note_length * 2, 5);
-}
-
-void low_power_song_pt18 () {
-    //measure 18
-  playNote(NOTE_D, quarter_note_length / 2, 5);
-  for (int i = 0; i < 2; i++) {
-    playNote(NOTE_G, quarter_note_length / 2, 5);
-  }
-  playNote(NOTE_F, quarter_note_length / 2, 5);
-}
-
-void low_power_song_pt19 () {
-    //measure 19
-  playNote(NOTE_Eb, quarter_note_length, 5);
-  restNote(quarter_note_length);
-}
-
-void low_power_song_pt20 () {
-    //measure 20
-  playNote(NOTE_C, quarter_note_length, 5);
-  restNote(quarter_note_length);
-}
-
-void low_power_song_pt21 () {
-    //measure 21
-  playNote(NOTE_G, quarter_note_length * 3, 5);
-}
-
-void low_power_song_pt22 () {
-    //measure 22
-  restNote(quarter_note_length / 2);
-  for (int i = 0; i < 3; i++) {
-    playNote(NOTE_Ab, quarter_note_length / 2, 5);
-  }
-}
-
-void low_power_song_pt23 () {
-    //measure 23
-  playNote(NOTE_F, quarter_note_length * 6, 5);
-}
-
-
 void setup(void){ 
   
   print_pinout();
@@ -1521,9 +1631,12 @@ void loop() {
             Serial.print("Buzzer frequency: ");
             Serial.println(i);
             
+            
             // Check for exit condition
             if (!actionTriggered) break;
+            
         }
+        
         // Reset frequency when done
         if (!actionTriggered) {
             ledcAnalogWrite(BUZZER, 0);
@@ -1533,6 +1646,11 @@ void loop() {
         }
     }
 
+    
+    
+    
+    
+/*
     if(batteryLow) {
       lowBatteryCharm();
       Serial.println("Low Battery Charm Activated");
@@ -1544,6 +1662,11 @@ void loop() {
             ledcAnalogWrite(BUZZER, 0);
         }
     }
+    
+    */
+
+
+
 
   //checkBatteryAndTriggerBuzzer();
  // Serial.println(BatteryLife);
@@ -1558,6 +1681,92 @@ void loop() {
     Serial.println("Battery is NORMAL");  // Print normal battery status
   }
   */
+  if (batteryLow) {
+    switch (song_pt) {
+      case 1:
+        low_power_song_pt1();
+        break;
+      case 2:
+        low_power_song_pt2();
+        break;
+      case 3:
+        low_power_song_pt3();
+        break;
+      case 4:
+        low_power_song_pt4();
+        break;
+      case 5:
+        low_power_song_pt5();
+        break;
+      case 6:
+        low_power_song_pt6();
+        break;
+      case 7:
+        low_power_song_pt7();
+        break;
+      case 8:
+        low_power_song_pt8();
+        break;
+      case 9:
+        low_power_song_pt9();
+        break;
+      case 10:
+        low_power_song_pt10();
+        break;
+      case 11:
+        low_power_song_pt11();
+        break;
+      case 12:
+        low_power_song_pt12();
+        break;
+      case 13:
+        low_power_song_pt13();
+        break;
+      case 14:
+        low_power_song_pt14();
+        break;
+      case 15:
+        low_power_song_pt15();
+        break;
+      case 16:
+        low_power_song_pt16();
+        break;
+      case 17:
+        low_power_song_pt17();
+        break;
+      case 18:
+        low_power_song_pt18();
+        break;
+      case 19:
+        low_power_song_pt19();
+        break;
+      case 20:
+        low_power_song_pt20();
+        break;
+      case 21:
+        low_power_song_pt21();
+        break;
+      case 22:
+        low_power_song_pt22();
+        break;
+      case 23:
+        low_power_song_pt23();
+        break;
+      default:
+        song_pt = 1;
+        break;
+    }
+    song_pt++;
+  }
+  // TODO: implement logic if a snooze is off
+  else if (!batteryLow) {
+    song_pt = 1;
+    ledcAnalogWrite(BUZZER, 0);
+    // TODO: implement logic for turning the buzzer off
+
+    // TODO: implement logic for turning a snooze boolean off
+  }
+ 
 
   // See if there's any touch data for us
   if (tft.getTouch(&x, &y)) {
@@ -1570,7 +1779,12 @@ void loop() {
         tft.fillCircle(x, y, 2, TFT_BLACK);
       #endif
 
+        
+
   //breakpoint 5
+
+
+      
       if (SwitchOn) {
         if ((x > REDBUTTON_X) && (x < (REDBUTTON_X + REDBUTTON_W))) {
           if ((y > REDBUTTON_Y) && (y <= (REDBUTTON_Y + REDBUTTON_H))) {
@@ -1669,92 +1883,6 @@ void loop() {
         startBLEScan();
     }
     */
-
-  // TODO: implement snooze boolean in the if
-  if (batteryLow) {
-    switch (song_pt) {
-      case 1:
-        low_power_song_pt1();
-        break;
-      case 2:
-        low_power_song_pt2();
-        break;
-      case 3:
-        low_power_song_pt3();
-        break;
-      case 4:
-        low_power_song_pt4();
-        break;
-      case 5:
-        low_power_song_pt5();
-        break;
-      case 6:
-        low_power_song_pt6();
-        break;
-      case 7:
-        low_power_song_pt7();
-        break;
-      case 8:
-        low_power_song_pt8();
-        break;
-      case 9:
-        low_power_song_pt9();
-        break;
-      case 10:
-        low_power_song_pt10();
-        break;
-      case 11:
-        low_power_song_pt11();
-        break;
-      case 12:
-        low_power_song_pt12();
-        break;
-      case 13:
-        low_power_song_pt13();
-        break;
-      case 14:
-        low_power_song_pt14();
-        break;
-      case 15:
-        low_power_song_pt15();
-        break;
-      case 16:
-        low_power_song_pt16();
-        break;
-      case 17:
-        low_power_song_pt17();
-        break;
-      case 18:
-        low_power_song_pt18();
-        break;
-      case 19:
-        low_power_song_pt19();
-        break;
-      case 20:
-        low_power_song_pt20();
-        break;
-      case 21:
-        low_power_song_pt21();
-        break;
-      case 22:
-        low_power_song_pt22();
-        break;
-      case 23:
-        low_power_song_pt23();
-        break;
-      default:
-        song_pt = 1;
-        break;
-    }
-  }
-  // TODO: implement logic if a snooze is off
-  else if (!batteryLow) {
-    song_pt = 1;
-    // TODO: implement logic for turning the buzzer off
-
-    // TODO: implement logic for turning a snooze boolean off
-  }
- 
 }
 
 //please work!
