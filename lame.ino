@@ -26,12 +26,12 @@
 #include <BLEUtils.h>
 #include <BLEServer.h>
 
-#define TFT_BL 17                         //define backlight pin   
+#define TFT_BL 17                        //define backlight pin  
 #define BUZZER 33                          //define buzzer pin                
-#define TP_BUSY 2
-#define TP_CS 13
-#define TP_IRQ 12
-
+#define TP_BUSY 4                         //changed from 2 to 4
+//#define TP_CS 13
+#define TP_IRQ 13                          //changed from 12 to 13
+#define SD_CS 2
 
 #define CALIBRATION_FILE "/TouchCalData3" //for calibration files, not used
 #define REPEAT_CAL false
@@ -85,6 +85,10 @@
 #define SETBUTTON_W FRAME_W
 #define SETBUTTON_H 40
 
+
+//test 
+unsigned long lastBatteryCharmTime = 0;
+const unsigned long batteryCharmInterval = 500;  // Adjust the interval as needed
 
 
 // Move plus/minus buttons to the right side
@@ -161,11 +165,169 @@ int co2Index = 0;
 
 String BatteryLife = "";
 
-static void notifyCallback(BLERemoteCharacteristic* pBLERemoteCharacteristic, uint8_t* pData, size_t length, bool isNotify) {
-    Serial.print(" Notification received: ");
-    Serial.println((char*)pData);
-    BatteryLife = (char*)pData;
+//3/28/25 breakpoint(1)
+//Battery Life Variables
+const float LOW_BATTERY_THRESHOLD = 1.2;               //Set the voltage threshold for low battery to 1.2V
+const int READING_COUNT = 10;                         //Set the size of the array storing voltage values
+const int MIN_READING_FOR_AVERAGE = 3;                //Set the minimum readings needed before calculating average to 3
+const unsigned long VERIFICATION_DELAY_MS = 5000;     //Set the verificaiton period to 5 seconds 
+
+static bool batteryLow = false;                       //Initially set the low battery status to false
+static bool batteryLowPending = false;                //Initially set the pending low battery status to false 
+static unsigned long lowBatteryDetectionTime = 0;     //Time when the low battery was first detected
+
+float voltageReadings[READING_COUNT];                 //Array storing the voltage  readings
+int currentReadingIndex = 0;                          //Current position in the array
+bool bufferFilled = false;                            //Flag indicating array is full of the past 10 values
+float averageVoltage = 0.0;
+//end of breakpoint(1)
+
+//breakpoint (3)
+bool newDataReceived = false;  // Flag to check if new data has been received
+
+static void notifyCallback(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, bool isNotify) {
+    // Update BatteryLife with the received data
+    BatteryLife = String((char*)pData).substring(0, length);
+    Serial.print("Notification received: ");
+    Serial.println(BatteryLife);
+    newDataReceived = true;  // Mark new data as received
 }
+
+void lowBatteryCharmLoop() {
+
+  while (batteryLow == true){
+    lowBatteryCharm();  // Play the low battery sound
+        delay(500);  // Add a small delay to avoid overwhelming the system, adjust if needed
+
+  }
+}
+
+void lame(){
+    if (!newDataReceived) {
+        return;  // If no new data, do nothing
+    }
+
+    // Convert BatteryLife to float
+    float voltage = BatteryLife.toFloat();
+
+    // Only process valid numbers (not NAN)
+    if (!isnan(voltage)) {
+        // Print the new voltage reading
+        Serial.print("New voltage reading: ");
+        Serial.print(voltage);
+        Serial.println("V");
+
+        // Store reading in circular buffer
+        voltageReadings[currentReadingIndex] = voltage;
+        currentReadingIndex = (currentReadingIndex + 1) % READING_COUNT;  // Wrap around
+
+        // Mark buffer as filled after first complete cycle
+        if (!bufferFilled && currentReadingIndex == 0) {
+            bufferFilled = true;
+        }
+
+        // Print current buffer contents
+        Serial.print("Current Battery Readings: [");
+        int count = bufferFilled ? READING_COUNT : currentReadingIndex;  // Number of valid readings
+        for (int i = 0; i < count; i++) {
+            // Calculate proper index for circular buffer
+            int idx = (currentReadingIndex + i) % (bufferFilled ? READING_COUNT : currentReadingIndex);
+            if (i > 0) Serial.print(", ");  // Add comma separator
+            Serial.print(voltageReadings[idx]);  // Print reading
+        }
+        Serial.println("]");
+
+        // Only calculate average if we have enough readings
+        if (count >= MIN_READING_FOR_AVERAGE) {
+            float sum = 0;
+            int validCount = 0;
+
+            // Sum all valid readings
+            for (int i = 0; i < count; i++) {
+                int idx = (currentReadingIndex + i) % (bufferFilled ? READING_COUNT : currentReadingIndex);
+                if (!isnan(voltageReadings[idx])) {
+                    sum += voltageReadings[idx];
+                    validCount++;
+                }
+            }
+
+            // Calculate and display average if we have valid readings
+            if (validCount > 0) {
+                averageVoltage = sum / validCount;
+                Serial.print("Average (");
+                Serial.print(validCount);
+                Serial.print(" readings): ");
+                Serial.print(averageVoltage);
+                Serial.println("V");
+
+                // Battery status verification logic (without timer)
+                if (averageVoltage < LOW_BATTERY_THRESHOLD) {
+                    if (!batteryLowPending && !batteryLow) {
+                        // First detection of low voltage
+                        batteryLowPending = true;
+                        lowBatteryDetectionTime = millis();  // Record detection time
+                        Serial.println("Potential low battery, timer will now verify");
+                        batteryStatusBox(270, 275, "Ptnl. Low Batery...", TFT_ORANGE);
+                    } 
+                    else if (batteryLowPending && (millis() - lowBatteryDetectionTime >= VERIFICATION_DELAY_MS)) {
+                        // Low battery confirmed after verification period
+                        
+                        batteryLowPending = false;
+                        batteryLow = true;
+                        Serial.println("CONFIRMED: LOW BATTERY!");
+                        Serial.println("Buzzer activated");
+                        batteryStatusBox(8, 275, "Low Battery!", TFT_ORANGE);
+                        batteryStatusBox(270, 275, "Snooze", 0x4208);
+                        
+
+                        
+                        
+                        
+                        //lowBatteryCharmLoop();
+                        
+                    }
+                } 
+                
+                else if (averageVoltage < 1.40) {
+                        Serial.println("Approaching Low Battery");
+                        batteryStatusBox(270, 275, "Appr. Low Battery", 0xfe00);
+                }
+                
+                else if (averageVoltage > 1.40){
+                    Serial.println("Above 1.4");
+                    drawStatusBox(270, 275, " ", 0x18c3);
+                    batteryLow = false;
+                    // Battery voltage is normal
+                    if (batteryLowPending) {
+                        // Recovered during verification period
+                        batteryLowPending = false;
+                        Serial.println("False alarm, battery recovered during verification");
+                    }
+                    else if (batteryLow) {
+                        // Recovered after being confirmed low
+                        batteryLow = false;
+                        Serial.println("Battery back to normal");
+                        Serial.println("Buzzer Off");
+                        drawStatusBox(270, 275, " ", 0x18c3);
+
+                    }
+                }
+            }
+        } else {
+            Serial.println("Not enough readings for average yet");
+        }
+    } else {
+        Serial.println("Received invalid voltage data!");
+    }
+
+    newDataReceived = false;  // Reset the flag after processing
+}
+
+
+
+
+
+
 
 class MyClientCallback : public BLEClientCallbacks {
     void onConnect(BLEClient* pclient) override {
@@ -233,6 +395,12 @@ bool connectToServer() {
         batteryCharacteristic->registerForNotify(notifyCallback);
     }
 
+  if (ventCharacteristic->canNotify()) {
+    ventCharacteristic->registerForNotify(notifyCallback);
+   
+  }
+
+
     isConnected = true;
     return true;
 }
@@ -288,11 +456,11 @@ void sendTemperatureValue() {
 
 // Call these inside your button press functions
 void openVent() {
-    sendVentCommand("open");
+    sendVentCommand("OPEN\0");
 }
 
 void closeVent() {
-    sendVentCommand("close");
+    sendVentCommand("CLOSE\0");
 }
 
 //breakpoint 1000
@@ -325,8 +493,9 @@ void playNote_legato(note_t note, int timeLength, int octave) {
   delay(timeLength);
 }
 
-/*
+
 void lowBatteryCharm() {
+  uint16_t x, y;
   // measure 1/2
   for (int i = 0; i < 3; i++) {
     playNote(NOTE_G, quarter_note_length / 2, 4);
@@ -423,9 +592,13 @@ void lowBatteryCharm() {
   //measure 23
   playNote(NOTE_F, quarter_note_length * 6, 5);
 
-  restNote(5000);
+  restNote(50);
+
+  if (tft.getTouch(&x, &y)){
+    return;
+  }
 }
-*/
+
 //-------------------------------------------------------------------//
 
 
@@ -610,6 +783,19 @@ void updateGreenSquare(int deltaY) {
 }
 
 
+void batteryStatusBox(int x, int y, String text, uint16_t color){
+  sprite.deleteSprite();
+
+  sprite.createSprite(300, 50);
+  sprite.fillSprite(color);
+  sprite.loadFont(small);
+  sprite.setTextColor(TFT_WHITE);
+  sprite.setTextDatum(MC_DATUM);
+  sprite.drawString(text, 106, 25);
+  sprite.pushSprite(x,y);
+  sprite.unloadFont();
+
+}
 
 // Function to draw a standard status box
 void drawStatusBox(int x, int y, String text, uint16_t color) {
@@ -825,7 +1011,7 @@ void displayCO2(uint16_t co2) {
     sprite.setTextDatum(MC_DATUM);
 
     // Draw the CO2 value inside the sprite
-    sprite.drawString(String(co2) + " ppm", 77, 25);  // Centered text
+    sprite.drawString(String(co2) + " ppm", 76, 25);  // Centered text
 
     // Unload the font to free memory
     sprite.unloadFont();
@@ -892,35 +1078,114 @@ void temp()
 }
 */
 
+//breakpoint(2)
+// Variable to store the last received voltage value
+float lastReceivedVoltage = -1.0; // Initial value that's not a valid voltage
+
 void checkBatteryAndTriggerBuzzer() {
-    // turn string into float
+    // Skip if no battery data received yet
     if (BatteryLife.equals("")) {
-      return;
+        return;
     }
-    float batteryLifeValue = BatteryLife.toFloat();  // Convert the battery life to float
+
+    // Convert battery string to float
+    float voltage = BatteryLife.toFloat();
+
+    // Print the new voltage reading
+    Serial.print("New voltage reading: ");
+    Serial.print(voltage);
+    Serial.println("V");
+
+    // Store reading in circular buffer
+    voltageReadings[currentReadingIndex] = voltage;
     
-    //breakpoint
-    //when battery is plugged in change to 1.20
-    if (batteryLifeValue < 1.20) {
-        // Turn the buzzer on
-        //analogWrite(BUZZER, 100);  // Adjust value if using PWM to control buzzer
-        //lowBatteryCharm();
-        //Serial.println("Battery life is low, buzzer ON!");
-        //Serial.println(BatteryLife);
-        drawStatusBox(270, 275, "Low Battery!", TFT_RED);
-    } else {
-        // Turn the buzzer off
-        analogWrite(BUZZER, 0);  // Turn off buzzer
-        //Serial.println("Battery life is sufficient, buzzer OFF.");
-        //Serial.println(BatteryLife);
-        drawStatusBox(270, 275, " ", 0x18c3);
+    // Increment the current reading index and wrap around if necessary
+    currentReadingIndex = (currentReadingIndex + 1) % READING_COUNT;
+
+    // Print current buffer contents
+    Serial.print("Current Battery Readings: [");
+    for (int i = 0; i < READING_COUNT; i++) {
+        if (i > 0) Serial.print(", ");
+        Serial.print(voltageReadings[i]);
+    }
+    Serial.println("]");
+
+    // Calculate and display average if enough readings are available
+    if (currentReadingIndex == 0) {  // This means the buffer is full
+        float sum = 0;
+        int validCount = 0;
+
+        // Sum all valid readings
+        for (int i = 0; i < READING_COUNT; i++) {
+            sum += voltageReadings[i];
+            validCount++;
+        }
+
+        // Calculate and display average if we have valid readings
+        if (validCount > 0) {
+            float averageVoltage = sum / validCount;
+            Serial.print("Average (");
+            Serial.print(validCount);
+            Serial.print(" readings): ");
+            Serial.print(averageVoltage);
+            Serial.println("V");
+
+            // Battery status verification logic
+            if (averageVoltage < LOW_BATTERY_THRESHOLD) {
+                if (!batteryLowPending && !batteryLow) {
+                    // First detection of low voltage
+                    batteryLowPending = true;
+                    lowBatteryDetectionTime = millis();  // Record detection time
+                    Serial.println("Potential low battery, timer will now verify");
+                } 
+                else if (batteryLowPending && (millis() - lowBatteryDetectionTime >= VERIFICATION_DELAY_MS)) {
+                    // Low battery confirmed after verification period
+                    batteryLowPending = false;
+                    batteryLow = true;
+                    Serial.println("CONFIRMED: LOW BATTERY!");
+                }
+            } 
+            
+            else {
+                // Battery voltage is normal
+                if (batteryLowPending) {
+                    // Recovered during verification period
+                    batteryLowPending = false;
+                    Serial.println("False alarm, battery recovered during verification");
+                }
+                else if (batteryLow) {
+                    // Recovered after being confirmed low
+                    batteryLow = false;
+                    Serial.println("Battery back to normal");
+                }
+            }
+        } 
+    } 
+    
+    else {
+        Serial.println("Not enough readings for average yet");
     }
 }
+
+
+
+
+
+
+
+
+
 
 //breakpoint 
 
 unsigned long lastSensorReadTime = 0;  // Store last sensor read time
 const unsigned long sensorReadInterval = 2000;  // 2 seconds interval for both sensors
+
+unsigned long lastBuzzerUpdate = 0;
+int currentFrequency = 4000;
+bool increasingFrequency = true;
+
+
 void displaySensorData() {
     static unsigned long lastSensorReadTime = 0;  // To keep track of when to read the sensors again
     unsigned long currentMillis = millis();  // Current time
@@ -981,26 +1246,19 @@ void displaySensorData() {
                 int avgCO2 = totalCO2 / 5;
 
                 // If the average CO2 level exceeds the threshold, trigger the alarm
-                if (co2 > 1800) {
-                  if (!actionTriggered) {
-                      actionTriggered = true;
-                      drawStatusBox(10, 275, "High CO2 LEVEL!", TFT_RED);
-                      analogWrite(BUZZER, 100);
-                      
-                      for (int i = 4000; i <= 5500; i+=8) {
-                          ledcAnalogWrite(BUZZER, 200);
-                          ledcChangeFrequency(BUZZER, i, 12); // 1 khz, 12 bit resolution
-                          delayMicroseconds(8000);
-                      }
-                      
-                  } 
-                } else {
-                    if (actionTriggered) {
-                        actionTriggered = false;
-                        drawStatusBox(10, 275, "Normal CO2 Levels :)", 0x18c3);  // Display normal CO2 message
-                        analogWrite(BUZZER, 0); // Turn off buzzer or LED
-                    }
-                }
+if (co2 > 1800) {
+    if (!actionTriggered) {
+        actionTriggered = true;
+        drawStatusBox(10, 275, "High CO2 LEVEL!", TFT_RED);
+        //breakpoint b4 this everything works
+       
+    }
+} else {
+    if (actionTriggered) {
+        actionTriggered = false;
+        drawStatusBox(10, 275, "Normal CO2 Levels :)", 0x18c3);
+    }
+}
 
                 // Print all data on the same line
                 Serial.print("CO2: ");
@@ -1079,8 +1337,31 @@ void scanI2C() {
     if (count == 0) Serial.println("No I2C devices found");
 }
 
+void lowBatteryNotification() {
+
+    sprite.deleteSprite();  // Clear any previous sprite before creating a new one
+    sprite.createSprite(200, 120);  // Adjust sprite size to fit CO2 text properly
+    sprite.fillSprite(TFT_WHITE);  //0x0841, Set background (change if necessary)
+
+    // Load the large font
+    sprite.loadFont(inter);  
+
+    // Set text properties
+    sprite.setTextColor(TFT_BLACK);
+    sprite.setTextDatum(MC_DATUM);
+    sprite.drawString("Low Battery", 76, 25);  // Centered text
+
+    // Unload the font to free memory
+    sprite.unloadFont();
+
+    // Push the sprite to the screen at the desired position
+    sprite.pushSprite(170, 90);  // Adjust position as needed
+  
+
+}
 
 void setup(void){ 
+  
   print_pinout();
   analogWrite(TFT_BL, 255);   //send a pwm signal to backlight pin
   //digitalWrite(TFT_BL, HIGH);
@@ -1098,8 +1379,14 @@ void setup(void){
     pinMode(BUZZER, OUTPUT);
   // Setup timer with given frequency, resolution and attach it to a led pin with auto-selected channel
 
-  // ledcAttach(BUZZER, LEDC_BASE_FREQ, LEDC_TIMER_12_BIT);
-  ledcAttach(TFT_BL, BL_FREQ, 20);
+// Set up PWM for the backlight
+ledcAttach(TFT_BL, 10000, LEDC_TIMER_12_BIT);  // 10kHz frequency for backlight
+ledcWrite(TFT_BL, 4095); 
+
+// Set up PWM for the buzzer
+ledcAttach(BUZZER, LEDC_BASE_FREQ, LEDC_TIMER_12_BIT);  // Set buzzer frequency
+ledcWrite(BUZZER, 0);  //initially have the buzzer off. 
+  
   // Initialize SCD4x sensor
   Wire.begin();
   scd4x.begin(Wire);
@@ -1133,7 +1420,8 @@ void setup(void){
   tft.fillRect(0,40, 155,300, 0x1082);
   tft.fillRect(0,275,700,200, 0x18c3); //0x18c3
   //drawOpenCloseButtons();
-
+  drawStatusBox(10, 275, "Normal CO2 Levels :)", 0x18c3);
+  //tft.fillRect(10,275, 300, 300, TFT_GREEN);
 
 
     
@@ -1151,7 +1439,7 @@ void setup(void){
   // pinMode(BUZZER, OUTPUT);
   drawValue();
   drawVentStatus();
-
+  //lowBatteryNotification();
 
 /*
         sprite.fillSprite(TFT_BLACK); // Clear previous value
@@ -1169,16 +1457,72 @@ void setup(void){
 
 void loop() {
   //lowBatteryCharm();
+  //print_pinout();
   uint16_t x, y;
   static unsigned long lastDebounceTime = 0;  // For debouncing
   unsigned long debounceDelay = 30;  // 50ms debounce time
   displaySensorData();
   //temp();
+  lame();
   delay(100); // Reduce the delay for better responsiveness
   handleBluetooth();
-  checkBatteryAndTriggerBuzzer();
- // Serial.println(BatteryLife);
 
+  if (actionTriggered) {
+        for (int i = 4000; i <= 5500; i += 8) {
+            ledcAnalogWrite(BUZZER, 200);
+            ledcChangeFrequency(BUZZER, i, 12);
+            Serial.print("Buzzer frequency: ");
+            Serial.println(i);
+            
+            // Check for exit condition
+            if (!actionTriggered) break;
+            
+        }
+        
+        // Reset frequency when done
+        if (!actionTriggered) {
+            ledcAnalogWrite(BUZZER, 0);
+        } else {
+            // Immediately start next sweep
+            ledcAnalogWrite(BUZZER, 0);
+        }
+    }
+
+    
+    
+    
+    
+
+    if(batteryLow) {
+      lowBatteryCharm();
+      Serial.println("Low Battery Charm Activated");
+    
+        if (!batteryLow) {
+            ledcAnalogWrite(BUZZER, 0);
+        } else {
+            // Immediately start next sweep
+            ledcAnalogWrite(BUZZER, 0);
+        }
+    }
+    
+    
+
+
+
+
+  //checkBatteryAndTriggerBuzzer();
+ // Serial.println(BatteryLife);
+ 
+ /*
+  Serial.print("Average Voltage: ");
+  Serial.println(averageVoltage);  // Print the most recent average voltage
+ /*
+  if (batteryLow) {
+    Serial.println("Battery is LOW!");  // Print low battery status
+  } else {
+    Serial.println("Battery is NORMAL");  // Print normal battery status
+  }
+  */
 
   // See if there's any touch data for us
   if (tft.getTouch(&x, &y)) {
