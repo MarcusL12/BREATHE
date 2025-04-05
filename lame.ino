@@ -243,12 +243,19 @@ void lowBatteryCharmLoop() {
   }
 }
 
-void low_power_song_pt1 () {
+void low_power_song_pt1_1 () {
   restNote(quarter_note_length / 2);
-  // measure 1/2
-  for (int i = 0; i < 3; i++) {
-    playNote(NOTE_G, quarter_note_length / 2, 4);
-  }
+}
+void low_power_song_pt1_2 () {
+  playNote(NOTE_G, quarter_note_length / 2, 4);
+}
+
+void low_power_song_pt1_3 () {
+  playNote(NOTE_G, quarter_note_length / 2, 4);
+}
+
+void low_power_song_pt1_4 () {
+  playNote(NOTE_G, quarter_note_length / 2, 4);
 }
 
 void low_power_song_pt2 () {
@@ -273,28 +280,55 @@ void low_power_song_pt5 () {
   playNote(NOTE_D, quarter_note_length * 3, 4);
 }
 
-void low_power_song_pt6 () {
+void low_power_song_pt6_1 () {
    // measure 6
   restNote(quarter_note_length / 2);
-  for (int i = 0; i < 3; i++) {
-    playNote(NOTE_G, quarter_note_length / 2, 4);
-  }
+}
+void low_power_song_pt6_2 () {
+  // measure 6
+  playNote(NOTE_G, quarter_note_length / 2, 4);
+}
+void low_power_song_pt6_3 () {
+  // measure 6
+  playNote(NOTE_G, quarter_note_length / 2, 4);
 }
 
-void low_power_song_pt7 () {
+void low_power_song_pt6_4 () {
+  // measure 6
+  playNote(NOTE_G, quarter_note_length / 2, 4);
+}
+void low_power_song_pt7_1 () {
     // measure 7
   playNote(NOTE_Eb, quarter_note_length / 2, 4);
-  for (int i = 0; i < 3; i++) {
-    playNote(NOTE_Ab, quarter_note_length / 2, 4);
-  }
 }
 
-void low_power_song_pt8 () {
-    //measure 8
+void low_power_song_pt7_2 () {
+  // measure 7
+  playNote(NOTE_Ab, quarter_note_length / 2, 4);
+}
+void low_power_song_pt7_3 () {
+  // measure 7
+  playNote(NOTE_Ab, quarter_note_length / 2, 4);
+}
+void low_power_song_pt7_4 () {
+  // measure 7
+  playNote(NOTE_Ab, quarter_note_length / 2, 4);
+}
+
+
+void low_power_song_pt8_1 () {
+  //measure 8
   playNote(NOTE_G, quarter_note_length / 2, 4);
-  for (int i = 0; i < 3; i++) {
-    playNote(NOTE_Eb, quarter_note_length / 2, 5);
-  }
+}
+
+void low_power_song_pt8_2 () {
+  playNote(NOTE_Eb, quarter_note_length / 2, 5);
+}
+void low_power_song_pt8_3 () {
+  playNote(NOTE_Eb, quarter_note_length / 2, 5);
+}
+void low_power_song_pt8_4 () {
+  playNote(NOTE_Eb, quarter_note_length / 2, 5);
 }
 
 void low_power_song_pt9 () {
@@ -302,28 +336,56 @@ void low_power_song_pt9 () {
   playNote_legato(NOTE_C, quarter_note_length * 2, 5);
 }
 
-void low_power_song_pt10 () {
+void low_power_song_pt10_1 () {
     //measure 10
   playNote(NOTE_C, quarter_note_length / 2, 5);
-  for (int i = 0; i < 3; i++) {
-    playNote(NOTE_G, quarter_note_length / 2, 4);
-  }
+}
+void low_power_song_pt10_2 () {
+  playNote(NOTE_G, quarter_note_length / 2, 4);
+}
+void low_power_song_pt10_3 () {
+  playNote(NOTE_G, quarter_note_length / 2, 4);
+}
+void low_power_song_pt10_4 () {
+  playNote(NOTE_G, quarter_note_length / 2, 4);
 }
 
-void low_power_song_pt11 () {
+
+void low_power_song_pt11_1 () {
     //measure 11
   playNote(NOTE_D, quarter_note_length / 2, 4);
   for (int i = 0; i < 3; i++) {
     playNote(NOTE_Ab, quarter_note_length / 2, 4);
   }
 }
+void low_power_song_pt11_2 () {
+  //measure 11
+  playNote(NOTE_Ab, quarter_note_length / 2, 4);
+}
+void low_power_song_pt11_3 () {
+  //measure 11
+  playNote(NOTE_Ab, quarter_note_length / 2, 4);
+}
+void low_power_song_pt11_4 () {
+  //measure 11
+  playNote(NOTE_Ab, quarter_note_length / 2, 4);
+}
 
-void low_power_song_pt12 () {
+void low_power_song_pt12_1 () {
     //measure 12
   playNote(NOTE_G, quarter_note_length / 2, 4);
-  for (int i = 0; i < 3; i++) {
-    playNote(NOTE_F, quarter_note_length / 2, 5);
-  }
+}
+void low_power_song_pt12_2 () {
+  //measure 12
+  playNote(NOTE_F, quarter_note_length / 2, 5);
+}
+void low_power_song_pt12_3 () {
+  //measure 12
+  playNote(NOTE_F, quarter_note_length / 2, 5);
+}
+void low_power_song_pt12_4 () {
+  //measure 12
+  playNote(NOTE_F, quarter_note_length / 2, 5);
 }
 
 void low_power_song_pt13 () {
@@ -331,12 +393,18 @@ void low_power_song_pt13 () {
   playNote(NOTE_D, quarter_note_length * 2, 5);
 }
 
-void low_power_song_pt14 () {
+void low_power_song_pt14_1 () {
   playNote(NOTE_D, quarter_note_length / 2, 5);
-  for (int i = 0; i < 2; i++) {
+}
+
+void low_power_song_pt14_2 () {
     playNote(NOTE_G, quarter_note_length / 2, 5);
-  }
-  playNote(NOTE_F, quarter_note_length / 2, 5);
+}
+void low_power_song_pt14_3 () {
+    playNote(NOTE_G, quarter_note_length / 2, 5);
+}
+void low_power_song_pt14_4 () {
+    playNote(NOTE_F, quarter_note_length / 2, 5);
 }
 
 void low_power_song_pt15 () {
@@ -344,7 +412,7 @@ void low_power_song_pt15 () {
   playNote(NOTE_Eb, quarter_note_length * 2, 5);
 }
 
-void low_power_song_pt16 () {
+void low_power_song_pt16_1 () {
     //measure 16
   playNote(NOTE_D, quarter_note_length / 2, 5);
   for (int i = 0; i < 2; i++) {
@@ -352,12 +420,21 @@ void low_power_song_pt16 () {
   }
 }
 
+void low_power_song_pt16_2 () {
+  //measure 16
+  playNote(NOTE_G, quarter_note_length / 2, 5);
+}
+void low_power_song_pt16_3 () {
+  //measure 16
+  playNote(NOTE_G, quarter_note_length / 2, 5);
+}
+
 void low_power_song_pt17 () {
     //measure 17
   playNote(NOTE_Eb, quarter_note_length * 2, 5);
 }
 
-void low_power_song_pt18 () {
+void low_power_song_pt18_1 () {
     //measure 18
   playNote(NOTE_D, quarter_note_length / 2, 5);
   for (int i = 0; i < 2; i++) {
@@ -366,15 +443,34 @@ void low_power_song_pt18 () {
   playNote(NOTE_F, quarter_note_length / 2, 5);
 }
 
-void low_power_song_pt19 () {
+void low_power_song_pt18_2 () {
+  //measure 18
+  playNote(NOTE_G, quarter_note_length / 2, 5);
+}
+void low_power_song_pt18_3 () {
+  //measure 18
+  playNote(NOTE_G, quarter_note_length / 2, 5);
+}
+void low_power_song_pt18_4 () {
+  //measure 18
+  playNote(NOTE_F, quarter_note_length / 2, 5);
+}
+
+void low_power_song_pt19_1 () {
     //measure 19
   playNote(NOTE_Eb, quarter_note_length, 5);
+}
+void low_power_song_pt19_2 () {
+  //measure 19
   restNote(quarter_note_length);
 }
 
-void low_power_song_pt20 () {
+void low_power_song_pt20_1 () {
     //measure 20
   playNote(NOTE_C, quarter_note_length, 5);
+}
+void low_power_song_pt20_2 () {
+    //measure 20
   restNote(quarter_note_length);
 }
 
@@ -383,19 +479,27 @@ void low_power_song_pt21 () {
   playNote(NOTE_G, quarter_note_length * 3, 5);
 }
 
-void low_power_song_pt22 () {
-    //measure 22
+void low_power_song_pt22_1 () {
+  //measure 22
   restNote(quarter_note_length / 2);
-  for (int i = 0; i < 3; i++) {
-    playNote(NOTE_Ab, quarter_note_length / 2, 5);
-  }
+}
+void low_power_song_pt22_2 () {
+  //measure 22
+  playNote(NOTE_Ab, quarter_note_length / 2, 5);
+}
+void low_power_song_pt22_3 () {
+  //measure 22
+  playNote(NOTE_Ab, quarter_note_length / 2, 5);
+}
+void low_power_song_pt22_4 () {
+  //measure 22
+  playNote(NOTE_Ab, quarter_note_length / 2, 5);
 }
 
 void low_power_song_pt23 () {
-    //measure 23
+  //measure 23
   playNote(NOTE_F, quarter_note_length * 6, 5);
 }
-
 
 void lame(){
     if (!newDataReceived) {
@@ -1731,72 +1835,174 @@ Serial.println(buzzerFrequency); // Print the buzzer frequency
     // Handle low battery song play
     switch (song_pt) {
       case 1:
-        low_power_song_pt1();
+        low_power_song_pt1_1();
         break;
       case 2:
-        low_power_song_pt2();
+        low_power_song_pt1_2();
         break;
       case 3:
-        low_power_song_pt3();
+        low_power_song_pt1_3();
         break;
       case 4:
-        low_power_song_pt4();
+        low_power_song_pt1_4();
         break;
       case 5:
-        low_power_song_pt5();
+        low_power_song_pt2();
         break;
       case 6:
-        low_power_song_pt6();
+        low_power_song_pt3();
         break;
       case 7:
-        low_power_song_pt7();
+        low_power_song_pt4();
         break;
       case 8:
-        low_power_song_pt8();
+        low_power_song_pt5();
         break;
       case 9:
-        low_power_song_pt9();
+        low_power_song_pt6_1();
         break;
       case 10:
-        low_power_song_pt10();
+        low_power_song_pt6_2();
         break;
       case 11:
-        low_power_song_pt11();
+        low_power_song_pt6_3();
         break;
       case 12:
-        low_power_song_pt12();
+        low_power_song_pt6_4();
         break;
       case 13:
-        low_power_song_pt13();
+        low_power_song_pt7_1();
         break;
       case 14:
-        low_power_song_pt14();
+        low_power_song_pt7_2();
         break;
       case 15:
-        low_power_song_pt15();
+        low_power_song_pt7_3();
         break;
       case 16:
-        low_power_song_pt16();
+        low_power_song_pt7_4();
         break;
       case 17:
-        low_power_song_pt17();
+        low_power_song_pt8_1();
         break;
       case 18:
-        low_power_song_pt18();
+        low_power_song_pt8_2();
         break;
       case 19:
-        low_power_song_pt19();
+        low_power_song_pt8_3();
         break;
       case 20:
-        low_power_song_pt20();
+        low_power_song_pt8_4();
         break;
       case 21:
-        low_power_song_pt21();
+        low_power_song_pt9();
         break;
       case 22:
-        low_power_song_pt22();
+        low_power_song_pt10_1();
         break;
       case 23:
+        low_power_song_pt10_2();
+        break;
+      case 24:
+        low_power_song_pt10_3();
+        break;
+      case 25:
+        low_power_song_pt10_4();
+        break;
+      case 26:
+        low_power_song_pt11_1();
+        break;
+      case 27:
+        low_power_song_pt11_2();
+        break;
+      case 28:
+        low_power_song_pt11_3();
+        break;
+      case 29:
+        low_power_song_pt11_4();
+        break;
+      case 30:
+        low_power_song_pt12_1();
+        break;
+      case 31:
+        low_power_song_pt12_2();
+        break;
+      case 32:
+        low_power_song_pt12_3();
+        break;
+      case 33:
+        low_power_song_pt12_4();
+        break;
+      case 34:
+        low_power_song_pt13();
+        break;
+      case 35:
+        low_power_song_pt14_1();
+        break;
+      case 36:
+        low_power_song_pt14_2();
+        break;
+      case 37:
+        low_power_song_pt14_3();
+        break;
+      case 38:
+        low_power_song_pt14_4();
+        break;
+      case 39:
+        low_power_song_pt15();
+        break;
+      case 40:
+        low_power_song_pt16_1();
+        break;
+      case 41:
+        low_power_song_pt16_2();
+        break;
+      case 42:
+        low_power_song_pt16_3();
+        break;
+      case 43:
+        low_power_song_pt17();
+        break;
+      case 44:
+        low_power_song_pt18_1();
+        break;
+      case 45:
+        low_power_song_pt18_2();
+        break;
+      case 46:
+        low_power_song_pt18_3();
+        break;
+      case 47:
+        low_power_song_pt18_4();
+        break;
+      case 48:
+        low_power_song_pt19_1();
+        break;
+      case 49:
+        low_power_song_pt19_2();
+        break;
+      case 50:
+        low_power_song_pt20_1();
+        break;
+      case 51:
+        low_power_song_pt20_2();
+        break;
+      case 52:
+        low_power_song_pt21();
+        break;
+      case 53:
+        low_power_song_pt22_1();
+        break;
+      case 54:
+        low_power_song_pt22_2();
+        break;
+      case 55:
+        low_power_song_pt22_3();
+        break;
+      case 56:
+        low_power_song_pt22_4();
+        break;
+      case 57:
         low_power_song_pt23();
         break;
       default:
