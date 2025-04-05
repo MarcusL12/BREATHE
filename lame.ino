@@ -48,7 +48,7 @@
 
 //for low battery sound
 #define ONVALUE 200
-#define quarter_note_length 300
+#define quarter_note_length 200
 #define NOTE_Ab NOTE_Gs
 
 
@@ -144,6 +144,8 @@ int valueY = PLUSBUTTON_Y + BUTTON_HEIGHT + 50;  // Keep the same Y position
 //song
 int song_pt;
 
+
+
 String ventStatus = "OPEN";  // Default status is OPEN
 
 #define VENT_SERVICE_UUID         "12345678-1234-5678-1234-56789abcdef0"  // Replace with actual UUID
@@ -185,8 +187,44 @@ bool bufferFilled = false;                            //Flag indicating array is
 float averageVoltage = 0.0;
 //end of breakpoint(1)
 
+
 //breakpoint (3)
 bool newDataReceived = false;  // Flag to check if new data has been received
+
+
+//bool for snooze
+bool snoozeActive = false;
+unsigned long snoozeTime = 0;
+const unsigned long snoozeDuration = 5000;
+
+
+
+
+
+
+
+#define SNOOZEBUTTON_X 270  // Position X of the snooze button (matches batteryStatusBox)
+#define SNOOZEBUTTON_Y 275  // Position Y of the snooze button (matches batteryStatusBox)
+#define SNOOZEBUTTON_W 200  // Width of the snooze button (adjust as needed)
+#define SNOOZEBUTTON_H 50   // Height of the snooze button (adjust as needed)
+
+void drawSnoozeButton() {
+  // Draw the snooze button at the given position and size
+  sprite.deleteSprite();  // Clear previous sprite before creating a new one
+  sprite.createSprite(SNOOZEBUTTON_W, SNOOZEBUTTON_H);  // Create sprite matching the previous text area
+  sprite.fillSprite(0x4208);  // Fill background with original rectangle color
+
+  sprite.loadFont(inter);  // Load Inter font
+  sprite.setTextColor(TFT_WHITE);  // Set text color
+  sprite.setTextDatum(MC_DATUM);   // Center text inside sprite
+
+    // Draw vent status inside the sprite
+  sprite.drawString("Snooze", SNOOZEBUTTON_W / 2, SNOOZEBUTTON_H /2);  
+
+    // Push sprite to screen at the designated position
+  sprite.pushSprite(SNOOZEBUTTON_X, SNOOZEBUTTON_Y);
+  sprite.unloadFont(); // Unload font to free memory
+}
 
 static void notifyCallback(BLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, bool isNotify) {
     // Update BatteryLife with the received data
@@ -434,7 +472,7 @@ void lame(){
                         Serial.println("CONFIRMED: LOW BATTERY!");
                         Serial.println("Buzzer activated");
                         batteryStatusBox(8, 275, "Low Battery!", TFT_ORANGE);
-                        batteryStatusBox(270, 275, "Snooze", 0x4208);
+                        drawSnoozeButton();
                         
 
                         
@@ -630,16 +668,21 @@ void ledcAnalogWrite(uint8_t pin, uint32_t value, uint32_t valueMax = 255) {
   ledcWrite(pin, duty);
 }
 
+void snoozeBuzzer(){
+    ledcAnalogWrite(BUZZER, 0);  // Turn off the buzzer
+    snoozeActive = true;
+}
 //for low battery sound:
 //-------------------------------------------------------------------//
 void restNote(int time) {
   analogWrite(BUZZER, 0);
   delay(time);
-  analogWrite(BUZZER, ONVALUE);
+  //analogWrite(BUZZER, ONVALUE);
 }
 
 void playNote(note_t note, int timeLength, int octave) {
   // play the note for 90% of the time then turn off for a little
+  analogWrite(BUZZER, ONVALUE);
   ledcWriteNote(BUZZER, note, octave);
   delay(timeLength * 0.9);
   restNote(timeLength * 0.1);
@@ -1630,7 +1673,7 @@ void loop() {
             ledcChangeFrequency(BUZZER, i, 12);
             Serial.print("Buzzer frequency: ");
             Serial.println(i);
-            
+            delayMicroseconds(5000);
             
             // Check for exit condition
             if (!actionTriggered) break;
@@ -1681,7 +1724,11 @@ void loop() {
     Serial.println("Battery is NORMAL");  // Print normal battery status
   }
   */
-  if (batteryLow) {
+if (batteryLow && !snoozeActive) {
+    int buzzerFrequency = ledcReadFreq(BUZZER); // Read the frequency
+Serial.print("Buzzer Frequency: ");
+Serial.println(buzzerFrequency); // Print the buzzer frequency
+    // Handle low battery song play
     switch (song_pt) {
       case 1:
         low_power_song_pt1();
@@ -1757,15 +1804,32 @@ void loop() {
         break;
     }
     song_pt++;
-  }
+
+    // Check if touch is detected first
+    uint16_t x, y;
+    if (tft.getTouch(&x, &y)) {
+        // Check if snooze button is pressed only when battery is low
+        if ((x > SNOOZEBUTTON_X) && (x < (SNOOZEBUTTON_X + SNOOZEBUTTON_W))) {
+            if ((y > SNOOZEBUTTON_Y) && (y <= (SNOOZEBUTTON_Y + SNOOZEBUTTON_H))) {
+                Serial.println("Snooze button pressed");
+                ledcWrite(BUZZER, 0);  // Initially have the buzzer off.
+                snoozeActive = true;  // Turn off the buzzer when snooze button is pressed
+                Serial.println(snoozeActive);
+            }
+        }
+    }
+}
   // TODO: implement logic if a snooze is off
   else if (!batteryLow) {
-    song_pt = 1;
-    ledcAnalogWrite(BUZZER, 0);
-    // TODO: implement logic for turning the buzzer off
-
-    // TODO: implement logic for turning a snooze boolean off
+    song_pt = 1;  // Reset song
+    snoozeActive = false;
+    Serial.println(snoozeActive);
   }
+
+  
+
+  // Handle snooze and buzzer logic
+  //handleSnooze();  // Continuously check and handle snooze functionality
  
 
   // See if there's any touch data for us
@@ -1872,6 +1936,15 @@ void loop() {
           drawVentStatus();  // Refresh text
           closeVent();
       }
+//snooze button
+      if ((x > SNOOZEBUTTON_X) && (x < (SNOOZEBUTTON_X + SNOOZEBUTTON_W))) {
+            if ((y > SNOOZEBUTTON_Y) && (y <= (SNOOZEBUTTON_Y + SNOOZEBUTTON_H))) {
+                Serial.println("hi");  // Print "hi" when snooze button is touched
+                snoozeBuzzer();
+
+                // Implement snooze functionality here, like delaying an alarm or stopping sound
+            }
+        }
     }
   
   // Continuously display sensor data
