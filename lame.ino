@@ -6,7 +6,7 @@
 ************************************************************/
 
 //original spot 
-//most updated code as of 3/14/2025, 7:17
+//revert back to here
 
 #include <SPI.h>                          //include necessary libraries such as spi, i2c, and tft
 #include <TFT_eSPI.h>           
@@ -14,7 +14,8 @@
 #include <SensirionI2CScd4x.h>
 #include "inter.h"                        //define font library
 //#include "interlarge.h"
-#include "large.h"
+#include "med.h"
+//#include "large.h"
 #include "small.h"
 
 #include "DHT20.h"
@@ -167,24 +168,32 @@ uint16_t co2Readings[5];
 bool triggerCO2 = false;
 bool actionTriggered = false; 
 int co2Index = 0;
+uint16_t co2 = 0;
+float temperatureF = 0.0; //temp
 
 String BatteryLife = "";
 
 //3/28/25 breakpoint(1)
 //Battery Life Variables
-const float LOW_BATTERY_THRESHOLD = 1.2;               //Set the voltage threshold for low battery to 1.2V
+const float LOW_BATTERY_THRESHOLD = 1.4;               //Set the voltage threshold for low battery to 1.2V
+const float DEAD_BATTERY_THRESHOLD = 1.1; // Threshold where it is considered dead
+
 const int READING_COUNT = 10;                         //Set the size of the array storing voltage values
 const int MIN_READING_FOR_AVERAGE = 3;                //Set the minimum readings needed before calculating average to 3
 const unsigned long VERIFICATION_DELAY_MS = 5000;     //Set the verificaiton period to 5 seconds 
 
 static bool batteryLow = false;                       //Initially set the low battery status to false
+static bool batteryDead=false;
+
 static bool batteryLowPending = false;                //Initially set the pending low battery status to false 
 static unsigned long lowBatteryDetectionTime = 0;     //Time when the low battery was first detected
 
 float voltageReadings[READING_COUNT];                 //Array storing the voltage  readings
 int currentReadingIndex = 0;                          //Current position in the array
 bool bufferFilled = false;                            //Flag indicating array is full of the past 10 values
-float averageVoltage = 0.0;
+
+//float averageVoltage = 0.0;                         //disable this during actual testing
+float averageVoltage;                             //disable this during prototyping
 //end of breakpoint(1)
 
 
@@ -243,19 +252,12 @@ void lowBatteryCharmLoop() {
   }
 }
 
-void low_power_song_pt1_1 () {
+void low_power_song_pt1 () {
   restNote(quarter_note_length / 2);
-}
-void low_power_song_pt1_2 () {
-  playNote(NOTE_G, quarter_note_length / 2, 4);
-}
-
-void low_power_song_pt1_3 () {
-  playNote(NOTE_G, quarter_note_length / 2, 4);
-}
-
-void low_power_song_pt1_4 () {
-  playNote(NOTE_G, quarter_note_length / 2, 4);
+  // measure 1/2
+  for (int i = 0; i < 3; i++) {
+    playNote(NOTE_G, quarter_note_length / 2, 4);
+  }
 }
 
 void low_power_song_pt2 () {
@@ -280,55 +282,28 @@ void low_power_song_pt5 () {
   playNote(NOTE_D, quarter_note_length * 3, 4);
 }
 
-void low_power_song_pt6_1 () {
+void low_power_song_pt6 () {
    // measure 6
   restNote(quarter_note_length / 2);
-}
-void low_power_song_pt6_2 () {
-  // measure 6
-  playNote(NOTE_G, quarter_note_length / 2, 4);
-}
-void low_power_song_pt6_3 () {
-  // measure 6
-  playNote(NOTE_G, quarter_note_length / 2, 4);
+  for (int i = 0; i < 3; i++) {
+    playNote(NOTE_G, quarter_note_length / 2, 4);
+  }
 }
 
-void low_power_song_pt6_4 () {
-  // measure 6
-  playNote(NOTE_G, quarter_note_length / 2, 4);
-}
-void low_power_song_pt7_1 () {
+void low_power_song_pt7 () {
     // measure 7
   playNote(NOTE_Eb, quarter_note_length / 2, 4);
+  for (int i = 0; i < 3; i++) {
+    playNote(NOTE_Ab, quarter_note_length / 2, 4);
+  }
 }
 
-void low_power_song_pt7_2 () {
-  // measure 7
-  playNote(NOTE_Ab, quarter_note_length / 2, 4);
-}
-void low_power_song_pt7_3 () {
-  // measure 7
-  playNote(NOTE_Ab, quarter_note_length / 2, 4);
-}
-void low_power_song_pt7_4 () {
-  // measure 7
-  playNote(NOTE_Ab, quarter_note_length / 2, 4);
-}
-
-
-void low_power_song_pt8_1 () {
-  //measure 8
+void low_power_song_pt8 () {
+    //measure 8
   playNote(NOTE_G, quarter_note_length / 2, 4);
-}
-
-void low_power_song_pt8_2 () {
-  playNote(NOTE_Eb, quarter_note_length / 2, 5);
-}
-void low_power_song_pt8_3 () {
-  playNote(NOTE_Eb, quarter_note_length / 2, 5);
-}
-void low_power_song_pt8_4 () {
-  playNote(NOTE_Eb, quarter_note_length / 2, 5);
+  for (int i = 0; i < 3; i++) {
+    playNote(NOTE_Eb, quarter_note_length / 2, 5);
+  }
 }
 
 void low_power_song_pt9 () {
@@ -336,56 +311,28 @@ void low_power_song_pt9 () {
   playNote_legato(NOTE_C, quarter_note_length * 2, 5);
 }
 
-void low_power_song_pt10_1 () {
+void low_power_song_pt10 () {
     //measure 10
   playNote(NOTE_C, quarter_note_length / 2, 5);
-}
-void low_power_song_pt10_2 () {
-  playNote(NOTE_G, quarter_note_length / 2, 4);
-}
-void low_power_song_pt10_3 () {
-  playNote(NOTE_G, quarter_note_length / 2, 4);
-}
-void low_power_song_pt10_4 () {
-  playNote(NOTE_G, quarter_note_length / 2, 4);
+  for (int i = 0; i < 3; i++) {
+    playNote(NOTE_G, quarter_note_length / 2, 4);
+  }
 }
 
-
-void low_power_song_pt11_1 () {
+void low_power_song_pt11 () {
     //measure 11
   playNote(NOTE_D, quarter_note_length / 2, 4);
   for (int i = 0; i < 3; i++) {
     playNote(NOTE_Ab, quarter_note_length / 2, 4);
   }
 }
-void low_power_song_pt11_2 () {
-  //measure 11
-  playNote(NOTE_Ab, quarter_note_length / 2, 4);
-}
-void low_power_song_pt11_3 () {
-  //measure 11
-  playNote(NOTE_Ab, quarter_note_length / 2, 4);
-}
-void low_power_song_pt11_4 () {
-  //measure 11
-  playNote(NOTE_Ab, quarter_note_length / 2, 4);
-}
 
-void low_power_song_pt12_1 () {
+void low_power_song_pt12 () {
     //measure 12
   playNote(NOTE_G, quarter_note_length / 2, 4);
-}
-void low_power_song_pt12_2 () {
-  //measure 12
-  playNote(NOTE_F, quarter_note_length / 2, 5);
-}
-void low_power_song_pt12_3 () {
-  //measure 12
-  playNote(NOTE_F, quarter_note_length / 2, 5);
-}
-void low_power_song_pt12_4 () {
-  //measure 12
-  playNote(NOTE_F, quarter_note_length / 2, 5);
+  for (int i = 0; i < 3; i++) {
+    playNote(NOTE_F, quarter_note_length / 2, 5);
+  }
 }
 
 void low_power_song_pt13 () {
@@ -393,18 +340,12 @@ void low_power_song_pt13 () {
   playNote(NOTE_D, quarter_note_length * 2, 5);
 }
 
-void low_power_song_pt14_1 () {
+void low_power_song_pt14 () {
   playNote(NOTE_D, quarter_note_length / 2, 5);
-}
-
-void low_power_song_pt14_2 () {
+  for (int i = 0; i < 2; i++) {
     playNote(NOTE_G, quarter_note_length / 2, 5);
-}
-void low_power_song_pt14_3 () {
-    playNote(NOTE_G, quarter_note_length / 2, 5);
-}
-void low_power_song_pt14_4 () {
-    playNote(NOTE_F, quarter_note_length / 2, 5);
+  }
+  playNote(NOTE_F, quarter_note_length / 2, 5);
 }
 
 void low_power_song_pt15 () {
@@ -412,7 +353,7 @@ void low_power_song_pt15 () {
   playNote(NOTE_Eb, quarter_note_length * 2, 5);
 }
 
-void low_power_song_pt16_1 () {
+void low_power_song_pt16 () {
     //measure 16
   playNote(NOTE_D, quarter_note_length / 2, 5);
   for (int i = 0; i < 2; i++) {
@@ -420,21 +361,12 @@ void low_power_song_pt16_1 () {
   }
 }
 
-void low_power_song_pt16_2 () {
-  //measure 16
-  playNote(NOTE_G, quarter_note_length / 2, 5);
-}
-void low_power_song_pt16_3 () {
-  //measure 16
-  playNote(NOTE_G, quarter_note_length / 2, 5);
-}
-
 void low_power_song_pt17 () {
     //measure 17
   playNote(NOTE_Eb, quarter_note_length * 2, 5);
 }
 
-void low_power_song_pt18_1 () {
+void low_power_song_pt18 () {
     //measure 18
   playNote(NOTE_D, quarter_note_length / 2, 5);
   for (int i = 0; i < 2; i++) {
@@ -443,34 +375,15 @@ void low_power_song_pt18_1 () {
   playNote(NOTE_F, quarter_note_length / 2, 5);
 }
 
-void low_power_song_pt18_2 () {
-  //measure 18
-  playNote(NOTE_G, quarter_note_length / 2, 5);
-}
-void low_power_song_pt18_3 () {
-  //measure 18
-  playNote(NOTE_G, quarter_note_length / 2, 5);
-}
-void low_power_song_pt18_4 () {
-  //measure 18
-  playNote(NOTE_F, quarter_note_length / 2, 5);
-}
-
-void low_power_song_pt19_1 () {
+void low_power_song_pt19 () {
     //measure 19
   playNote(NOTE_Eb, quarter_note_length, 5);
-}
-void low_power_song_pt19_2 () {
-  //measure 19
   restNote(quarter_note_length);
 }
 
-void low_power_song_pt20_1 () {
+void low_power_song_pt20 () {
     //measure 20
   playNote(NOTE_C, quarter_note_length, 5);
-}
-void low_power_song_pt20_2 () {
-    //measure 20
   restNote(quarter_note_length);
 }
 
@@ -479,27 +392,19 @@ void low_power_song_pt21 () {
   playNote(NOTE_G, quarter_note_length * 3, 5);
 }
 
-void low_power_song_pt22_1 () {
-  //measure 22
+void low_power_song_pt22 () {
+    //measure 22
   restNote(quarter_note_length / 2);
-}
-void low_power_song_pt22_2 () {
-  //measure 22
-  playNote(NOTE_Ab, quarter_note_length / 2, 5);
-}
-void low_power_song_pt22_3 () {
-  //measure 22
-  playNote(NOTE_Ab, quarter_note_length / 2, 5);
-}
-void low_power_song_pt22_4 () {
-  //measure 22
-  playNote(NOTE_Ab, quarter_note_length / 2, 5);
+  for (int i = 0; i < 3; i++) {
+    playNote(NOTE_Ab, quarter_note_length / 2, 5);
+  }
 }
 
 void low_power_song_pt23 () {
-  //measure 23
+    //measure 23
   playNote(NOTE_F, quarter_note_length * 6, 5);
 }
+
 
 void lame(){
     if (!newDataReceived) {
@@ -559,24 +464,29 @@ void lame(){
                 Serial.print(averageVoltage);
                 Serial.println("V");
 
+
                 // Battery status verification logic (without timer)
-                if (averageVoltage < LOW_BATTERY_THRESHOLD) {
+                if (averageVoltage < LOW_BATTERY_THRESHOLD && averageVoltage > 1.2) {
                     if (!batteryLowPending && !batteryLow) {
                         // First detection of low voltage
+                        batteryDead = false;
                         batteryLowPending = true;
                         lowBatteryDetectionTime = millis();  // Record detection time
                         Serial.println("Potential low battery, timer will now verify");
-                        batteryStatusBox(270, 275, "Ptnl. Low Batery...", TFT_ORANGE);
+                        Serial.println("voltage is less than 1.4 but greater than 1.2");
+                        batteryStatusBox(270, 275, "Ptnl. Low Batery", TFT_ORANGE);
                     } 
                     else if (batteryLowPending && (millis() - lowBatteryDetectionTime >= VERIFICATION_DELAY_MS)) {
                         // Low battery confirmed after verification period
-                        
+                        batteryDead = false;
                         batteryLowPending = false;
                         batteryLow = true;
                         Serial.println("CONFIRMED: LOW BATTERY!");
                         Serial.println("Buzzer activated");
                         batteryStatusBox(8, 275, "Low Battery!", TFT_ORANGE);
-                        drawSnoozeButton();
+                        batteryStatusBox(270, 275, " ",TFT_ORANGE);
+                        //drawSnoozeButton();
+                        lowBatteryCharm();
                         
 
                         
@@ -586,21 +496,23 @@ void lame(){
                         
                     }
                 } 
+
                 
-                else if (averageVoltage < 1.40) {
-                        Serial.println("Approaching Low Battery");
-                        batteryStatusBox(270, 275, "Appr. Low Battery", 0xfe00);
-                }
-                
-                else if (averageVoltage > 1.40){
+                else if (averageVoltage > LOW_BATTERY_THRESHOLD){
                     Serial.println("Above 1.4");
                     drawStatusBox(270, 275, " ", 0x18c3);
+                    batteryStatusBox(8, 275, "", 0x18c3);
                     batteryLow = false;
+                    batteryDead = false;
+                    ledcWrite(BUZZER, 0);
                     // Battery voltage is normal
                     if (batteryLowPending) {
                         // Recovered during verification period
                         batteryLowPending = false;
                         Serial.println("False alarm, battery recovered during verification");
+                        batteryStatusBox(8, 275, "", 0x18c3);
+                        ledcWrite(BUZZER, 0);
+
                     }
                     else if (batteryLow) {
                         // Recovered after being confirmed low
@@ -608,9 +520,22 @@ void lame(){
                         Serial.println("Battery back to normal");
                         Serial.println("Buzzer Off");
                         drawStatusBox(270, 275, " ", 0x18c3);
+                        batteryStatusBox(8, 275, "", 0x18c3);
+                        ledcWrite(BUZZER, 0);
 
                     }
+                    
                 }
+
+                  else if(averageVoltage < 1.2) {
+                  batteryDead = true;
+                  Serial.println("Dead, Below 1.2");
+                  batteryStatusBox(8, 275, "   Vent Out of Battery!", TFT_ORANGE);
+
+                  
+                }
+
+ 
             }
         } else {
             Serial.println("Not enough readings for average yet");
@@ -1004,18 +929,20 @@ void drawSetButton() {
         sprite.loadFont(small);  
         sprite.setTextColor(TFT_WHITE, 0x4208);  // White text for contrast
         sprite.setTextDatum(MC_DATUM);
-        sprite.drawString("Set", SETBUTTON_W / 2, SETBUTTON_H / 2);
+        sprite.drawString("Status", SETBUTTON_W / 2, SETBUTTON_H / 2);
         sprite.unloadFont();
     } 
+    
     else {  // Manual Mode (Disabled)
-        sprite.fillSprite(0x1082);  // Gray background for Manual mode
+        sprite.fillSprite(0x4208);  // Green background for Autonomous mode
 
-        sprite.loadFont(small);
-        sprite.setTextColor(0x4228, 0x1082);  // Darker text for contrast
+        sprite.loadFont(small);  
+        sprite.setTextColor(TFT_WHITE, 0x4208);  // White text for contrast
         sprite.setTextDatum(MC_DATUM);
-        sprite.drawString("Disabled", SETBUTTON_W / 2, SETBUTTON_H / 2);
+        sprite.drawString("Status", SETBUTTON_W / 2, SETBUTTON_H / 2);
         sprite.unloadFont();
     }
+    
 
     sprite.pushSprite(SETBUTTON_X, SETBUTTON_Y);  // Draw sprite to screen
 }
@@ -1183,7 +1110,7 @@ void greenBtn()
   tft.setTextSize(2);
   tft.setTextDatum(MC_DATUM);
   tft.drawString("Autonomous", REDBUTTON_X + (FRAME_W / 2), REDBUTTON_Y - 15);
-
+//drawsetbutton
   // Move buttons out of bounds to hide them
   updateButtons(0);
   updateOC(0);
@@ -1229,6 +1156,23 @@ void drawValue() {
     sprite.unloadFont(); // Unload font to free memory
 }
 
+void drawValueRed() {
+    sprite.deleteSprite();  // Clear any previous sprite before creating a new one
+
+    sprite.createSprite(80, 40);  // Create a sprite for the value display
+    sprite.fillSprite(TFT_RED);  // Fill with background color
+
+    sprite.loadFont(inter);  // Load Inter font
+    sprite.setTextColor(TFT_WHITE);  // Set text color
+    sprite.setTextDatum(MC_DATUM);   // Center text inside sprite
+
+    // Draw the current value inside the sprite
+    sprite.drawString(String(currentValue), 40, 20);  
+
+    sprite.pushSprite(PLUSBUTTON_X - 77 + (FRAME_W / 2), PLUSBUTTON_Y - 5 + BUTTON_HEIGHT + 50);  // Push to screen
+
+    sprite.unloadFont(); // Unload font to free memory
+}
 
 /*
 void drawValueA() {
@@ -1281,18 +1225,41 @@ int getVentAngle(float temperatureF) {
 void displayTemperature(float temperatureF) {
     sprite.deleteSprite();  // Clear any previous sprite before creating a new one
 
-    sprite.createSprite(175, 100);  // Maintain the same sprite size
+    sprite.createSprite(160, 100);  // Maintain the same sprite size
     sprite.fillSprite(0x0841);  // Fill the background with red
 
     // Load the large font
-    sprite.loadFont(large);  
+    sprite.loadFont(med);  
 
     // Set text properties
     sprite.setTextColor(TFT_WHITE);  // White text for contrast
     sprite.setTextDatum(MC_DATUM);   // Center text in sprite
 
     // Draw the temperature value inside the sprite
-    sprite.drawString(String((int)temperatureF) + "°", 75, 75);  // Centered in sprite
+    sprite.drawString(String((int)temperatureF) + "°F", 75, 75);  // Centered in sprite
+
+    // Unload the font to free memory
+    sprite.unloadFont();
+
+    // Push the sprite to the screen at the same position
+    sprite.pushSprite(190, 50);
+}
+
+void displayTemperatureRed(float temperatureF) {
+    sprite.deleteSprite();  // Clear any previous sprite before creating a new one
+
+    sprite.createSprite(160, 100);  // Maintain the same sprite size
+    sprite.fillSprite(TFT_RED);  // Fill the background with red
+
+    // Load the large font
+    sprite.loadFont(med);  
+
+    // Set text properties
+    sprite.setTextColor(TFT_WHITE);  // White text for contrast
+    sprite.setTextDatum(MC_DATUM);   // Center text in sprite
+
+    // Draw the temperature value inside the sprite
+    sprite.drawString(String((int)temperatureF) + "°F", 75, 75);  // Centered in sprite
 
     // Unload the font to free memory
     sprite.unloadFont();
@@ -1304,8 +1271,30 @@ void displayTemperature(float temperatureF) {
 
 void displayCO2(uint16_t co2) {
     sprite.deleteSprite();  // Clear any previous sprite before creating a new one
-    sprite.createSprite(185, 40);  // Adjust sprite size to fit CO2 text properly
+    sprite.createSprite(160, 40);  // Adjust sprite size to fit CO2 text properly
     sprite.fillSprite(0x0841);  //0x0841, Set background (change if necessary)
+
+    // Load the large font
+    sprite.loadFont(inter);  
+
+    // Set text properties
+    sprite.setTextColor(TFT_WHITE);
+    sprite.setTextDatum(MC_DATUM);
+
+    // Draw the CO2 value inside the sprite
+    sprite.drawString(String(co2) + " ppm", 76, 25);  // Centered text
+
+    // Unload the font to free memory
+    sprite.unloadFont();
+
+    // Push the sprite to the screen at the desired position
+    sprite.pushSprite(180, 170);  // Adjust position as needed
+}
+
+void displayCO2red(uint16_t co2) {
+    sprite.deleteSprite();  // Clear any previous sprite before creating a new one
+    sprite.createSprite(160, 40);  // Adjust sprite size to fit CO2 text properly
+    sprite.fillSprite(TFT_RED);  //0x0841, Set background (change if necessary)
 
     // Load the large font
     sprite.loadFont(inter);  
@@ -1499,8 +1488,8 @@ void displaySensorData() {
         lastSensorReadTime = currentMillis;  // Update the last read time
 
         // Declare and initialize temperatureF here to make it accessible globally in the function
-        float temperatureF = 0.0;
-        uint16_t co2 = 0;
+        //float temperatureF = 0.0;
+        //uint16_t co2 = 0;
         float temperature = 0.0;
         float humidity = 0.0;
 
@@ -1512,7 +1501,7 @@ void displaySensorData() {
             humidity = DHT.getHumidity();  // Read humidity
 
             // Display temperature on the screen
-            displayTemperature(temperatureF);  // Update the temperature display on the screen
+            //displayTemperature(temperatureF);  // Update the temperature display on the screen
         } else {
             Serial.println("DHT20 read failed.");
         }
@@ -1537,7 +1526,7 @@ void displaySensorData() {
             } else {
                 // Collect the last 5 CO2 readings and calculate the average
 
-                displayCO2(co2);
+                //displayCO2(co2);
                 co2Readings[co2Index] = co2;
                 co2Index = (co2Index + 1) % 5;
 
@@ -1553,14 +1542,103 @@ void displaySensorData() {
 if (co2 > 1800) {
     if (!actionTriggered) {
         actionTriggered = true;
-        drawStatusBox(10, 275, "High CO2 LEVEL!", TFT_RED);
+        //drawStatusBox(10, 275, "High CO2 LEVEL!", TFT_RED); //moving the position of this fown fopt now
         //breakpoint b4 this everything works
-       
+        
+        //Re-render the screen again but make the background red.
+        //tft.fillRect(40, 40, 100, 100,TFT_GREEN);
+
+        
+        //for top bar
+tft.fillScreen(0x0841);
+        tft.fillRect(0,40, 155,300, 0x1082);
+        tft.fillRect(0,275,700,200, 0x18c3);
+
+        sprite.createSprite(320, 40);   // Size to match the "BREATHE Dashboard" section
+        sprite.loadFont(inter);         // Load custom font (inter)
+        sprite.setTextDatum(4);         // Set text alignment to center
+
+        // Draw BREATHE Dashboard Title
+        sprite.fillSprite(TFT_BLACK);   
+        sprite.setTextColor(TFT_WHITE);
+        sprite.setTextSize(1);  
+        sprite.drawString("B.R.E.A.T.H.E", 78, 24);  
+        sprite.pushSprite(0, 0);  
+
+ 
+
+        sprite.fillSprite(TFT_BLACK);
+        sprite.pushSprite(280,0);
+
+        sprite.fillSprite(TFT_BLACK);
+        sprite.setTextColor(TFT_WHITE);
+        sprite.drawString(" SET", 105, 24);
+        sprite.pushSprite(320, 0);
+
+        tft.fillRect(156, 40, 900, 234,TFT_RED);
+
+        greenBtn();
+        drawPlusMinusButtons();
+        drawValueRed();
+        drawSetButton();  // Update Set button appearance
+
+        drawVentStatus();
+        
+        displayCO2red(co2);
+        displayTemperatureRed(temperatureF);
+        
+
+        
+        if(batteryLow){
+          batteryStatusBox(8, 275, "Low Battery!", TFT_ORANGE);
+        }
+
+        else if (batteryDead){
+          batteryStatusBox(8, 275, "    Battery Dead!", TFT_ORANGE);
+        }
+
+        else {
+          drawStatusBox(10, 275, "High CO2 LEVEL!", 0x18c3);
+        }
+
     }
 } else {
     if (actionTriggered) {
         actionTriggered = false;
         drawStatusBox(10, 275, "Normal CO2 Levels :)", 0x18c3);
+        
+        tft.fillScreen(0x0841);
+        tft.fillRect(0,40, 155,300, 0x1082);
+        tft.fillRect(0,275,700,200, 0x18c3);
+
+        sprite.createSprite(320, 40);   // Size to match the "BREATHE Dashboard" section
+        sprite.loadFont(inter);         // Load custom font (inter)
+        sprite.setTextDatum(4);         // Set text alignment to center
+
+        // Draw BREATHE Dashboard Title
+        sprite.fillSprite(TFT_BLACK);   
+        sprite.setTextColor(TFT_WHITE);
+        sprite.setTextSize(1);  
+        sprite.drawString("B.R.E.A.T.H.E", 78, 24);  
+        sprite.pushSprite(0, 0);  
+
+ 
+
+        sprite.fillSprite(TFT_BLACK);
+        sprite.pushSprite(280,0);
+
+        sprite.fillSprite(TFT_BLACK);
+        sprite.setTextColor(TFT_WHITE);
+        sprite.drawString(" SET", 105, 24);
+        sprite.pushSprite(320, 0);
+
+        greenBtn();
+        drawPlusMinusButtons();
+        drawValue();
+        drawSetButton();  // Update Set button appearance
+
+        drawVentStatus();
+        displayCO2(co2);
     }
 }
 
@@ -1678,6 +1756,7 @@ void setup(void){
   tft.init();                 //initiliaze tft screen
   tft.setRotation(1);         //set oritentation of screen contetns
   tft.fillScreen(0x0841);  //set screen background to black
+  
 
   //breakpoint 2
     pinMode(BUZZER, OUTPUT);
@@ -1718,13 +1797,13 @@ ledcWrite(BUZZER, 0);  //initially have the buzzer off.
   // Draw G40 On Dashboard TItle
   sprite.fillSprite(TFT_BLACK);
   sprite.setTextColor(TFT_WHITE);
-  sprite.drawString("SD G40", 105, 24);
+  sprite.drawString(" SET", 105, 24);
   sprite.pushSprite(320, 0); 
 
   tft.fillRect(0,40, 155,300, 0x1082);
   tft.fillRect(0,275,700,200, 0x18c3); //0x18c3
   //drawOpenCloseButtons();
-  drawStatusBox(10, 275, "Normal CO2 Levels :)", 0x18c3);
+  //drawStatusBox(" ", 0x18c3);
   //tft.fillRect(10,275, 300, 300, TFT_GREEN);
 
 
@@ -1754,7 +1833,7 @@ ledcWrite(BUZZER, 0);  //initially have the buzzer off.
   //sprite.drawString("Test", 120, 50);
   //sprite.pushSprite(0, 0);
 
-  
+  //tft.fillRect(156, 40, 900, 234,TFT_GREEN);
 
 
 }
@@ -1771,12 +1850,18 @@ void loop() {
   delay(100); // Reduce the delay for better responsiveness
   handleBluetooth();
 
+  if (!actionTriggered){
+    displayCO2(co2);
+    displayTemperature(temperatureF);
+  }
   if (actionTriggered) {
+    displayCO2red(co2);
+    displayTemperatureRed(temperatureF);
         for (int i = 4000; i <= 5500; i += 8) {
             ledcAnalogWrite(BUZZER, 200);
             ledcChangeFrequency(BUZZER, i, 12);
-            Serial.print("Buzzer frequency: ");
-            Serial.println(i);
+           // Serial.print("Buzzer frequency: ");
+           // Serial.println(i);
             delayMicroseconds(5000);
             
             // Check for exit condition
@@ -1787,9 +1872,11 @@ void loop() {
         // Reset frequency when done
         if (!actionTriggered) {
             ledcAnalogWrite(BUZZER, 0);
+            
         } else {
             // Immediately start next sweep
             ledcAnalogWrite(BUZZER, 0);
+            //displayCO2(co2);
         }
     }
 
@@ -1828,6 +1915,8 @@ void loop() {
     Serial.println("Battery is NORMAL");  // Print normal battery status
   }
   */
+/*
+  
 if (batteryLow && !snoozeActive) {
     int buzzerFrequency = ledcReadFreq(BUZZER); // Read the frequency
 Serial.print("Buzzer Frequency: ");
@@ -1835,174 +1924,72 @@ Serial.println(buzzerFrequency); // Print the buzzer frequency
     // Handle low battery song play
     switch (song_pt) {
       case 1:
-        low_power_song_pt1_1();
+        low_power_song_pt1();
         break;
       case 2:
-        low_power_song_pt1_2();
-        break;
-      case 3:
-        low_power_song_pt1_3();
-        break;
-      case 4:
-        low_power_song_pt1_4();
-        break;
-      case 5:
         low_power_song_pt2();
         break;
-      case 6:
+      case 3:
         low_power_song_pt3();
         break;
-      case 7:
+      case 4:
         low_power_song_pt4();
         break;
-      case 8:
+      case 5:
         low_power_song_pt5();
         break;
+      case 6:
+        low_power_song_pt6();
+        break;
+      case 7:
+        low_power_song_pt7();
+        break;
+      case 8:
+        low_power_song_pt8();
+        break;
       case 9:
-        low_power_song_pt6_1();
-        break;
-      case 10:
-        low_power_song_pt6_2();
-        break;
-      case 11:
-        low_power_song_pt6_3();
-        break;
-      case 12:
-        low_power_song_pt6_4();
-        break;
-      case 13:
-        low_power_song_pt7_1();
-        break;
-      case 14:
-        low_power_song_pt7_2();
-        break;
-      case 15:
-        low_power_song_pt7_3();
-        break;
-      case 16:
-        low_power_song_pt7_4();
-        break;
-      case 17:
-        low_power_song_pt8_1();
-        break;
-      case 18:
-        low_power_song_pt8_2();
-        break;
-      case 19:
-        low_power_song_pt8_3();
-        break;
-      case 20:
-        low_power_song_pt8_4();
-        break;
-      case 21:
         low_power_song_pt9();
         break;
-      case 22:
-        low_power_song_pt10_1();
+      case 10:
+        low_power_song_pt10();
         break;
-      case 23:
-        low_power_song_pt10_2();
+      case 11:
+        low_power_song_pt11();
         break;
-      case 24:
-        low_power_song_pt10_3();
+      case 12:
+        low_power_song_pt12();
         break;
-      case 25:
-        low_power_song_pt10_4();
-        break;
-      case 26:
-        low_power_song_pt11_1();
-        break;
-      case 27:
-        low_power_song_pt11_2();
-        break;
-      case 28:
-        low_power_song_pt11_3();
-        break;
-      case 29:
-        low_power_song_pt11_4();
-        break;
-      case 30:
-        low_power_song_pt12_1();
-        break;
-      case 31:
-        low_power_song_pt12_2();
-        break;
-      case 32:
-        low_power_song_pt12_3();
-        break;
-      case 33:
-        low_power_song_pt12_4();
-        break;
-      case 34:
+      case 13:
         low_power_song_pt13();
         break;
-      case 35:
-        low_power_song_pt14_1();
+      case 14:
+        low_power_song_pt14();
         break;
-      case 36:
-        low_power_song_pt14_2();
-        break;
-      case 37:
-        low_power_song_pt14_3();
-        break;
-      case 38:
-        low_power_song_pt14_4();
-        break;
-      case 39:
+      case 15:
         low_power_song_pt15();
         break;
-      case 40:
-        low_power_song_pt16_1();
+      case 16:
+        low_power_song_pt16();
         break;
-      case 41:
-        low_power_song_pt16_2();
-        break;
-      case 42:
-        low_power_song_pt16_3();
-        break;
-      case 43:
+      case 17:
         low_power_song_pt17();
         break;
-      case 44:
-        low_power_song_pt18_1();
+      case 18:
+        low_power_song_pt18();
         break;
-      case 45:
-        low_power_song_pt18_2();
+      case 19:
+        low_power_song_pt19();
         break;
-      case 46:
-        low_power_song_pt18_3();
+      case 20:
+        low_power_song_pt20();
         break;
-      case 47:
-        low_power_song_pt18_4();
-        break;
-      case 48:
-        low_power_song_pt19_1();
-        break;
-      case 49:
-        low_power_song_pt19_2();
-        break;
-      case 50:
-        low_power_song_pt20_1();
-        break;
-      case 51:
-        low_power_song_pt20_2();
-        break;
-      case 52:
+      case 21:
         low_power_song_pt21();
         break;
-      case 53:
-        low_power_song_pt22_1();
+      case 22:
+        low_power_song_pt22();
         break;
-      case 54:
-        low_power_song_pt22_2();
-        break;
-      case 55:
-        low_power_song_pt22_3();
-        break;
-      case 56:
-        low_power_song_pt22_4();
-        break;
-      case 57:
+      case 23:
         low_power_song_pt23();
         break;
       default:
@@ -2021,6 +2008,8 @@ Serial.println(buzzerFrequency); // Print the buzzer frequency
                 ledcWrite(BUZZER, 0);  // Initially have the buzzer off.
                 snoozeActive = true;  // Turn off the buzzer when snooze button is pressed
                 Serial.println(snoozeActive);
+                tft.fillRect(SNOOZEBUTTON_X, SNOOZEBUTTON_Y, SNOOZEBUTTON_W, SNOOZEBUTTON_Y, TFT_ORANGE);
+                
             }
         }
     }
@@ -2031,7 +2020,7 @@ Serial.println(buzzerFrequency); // Print the buzzer frequency
     snoozeActive = false;
     Serial.println(snoozeActive);
   }
-
+*/
   
 
   // Handle snooze and buzzer logic
@@ -2143,14 +2132,7 @@ Serial.println(buzzerFrequency); // Print the buzzer frequency
           closeVent();
       }
 //snooze button
-      if ((x > SNOOZEBUTTON_X) && (x < (SNOOZEBUTTON_X + SNOOZEBUTTON_W))) {
-            if ((y > SNOOZEBUTTON_Y) && (y <= (SNOOZEBUTTON_Y + SNOOZEBUTTON_H))) {
-                Serial.println("hi");  // Print "hi" when snooze button is touched
-                snoozeBuzzer();
 
-                // Implement snooze functionality here, like delaying an alarm or stopping sound
-            }
-        }
     }
   
   // Continuously display sensor data
