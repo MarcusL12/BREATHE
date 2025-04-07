@@ -178,8 +178,8 @@ String BatteryLife = "";
 const float LOW_BATTERY_THRESHOLD = 1.4;               //Set the voltage threshold for low battery to 1.2V
 const float DEAD_BATTERY_THRESHOLD = 1.1; // Threshold where it is considered dead
 
-const int READING_COUNT = 10;                         //Set the size of the array storing voltage values
-const int MIN_READING_FOR_AVERAGE = 3;                //Set the minimum readings needed before calculating average to 3
+const int READING_COUNT = 3;                         //Set the size of the array storing voltage values
+const int MIN_READING_FOR_AVERAGE = 2;                //Set the minimum readings needed before calculating average to 3
 const unsigned long VERIFICATION_DELAY_MS = 5000;     //Set the verificaiton period to 5 seconds 
 
 static bool batteryLow = false;                       //Initially set the low battery status to false
@@ -208,14 +208,18 @@ const unsigned long snoozeDuration = 5000;
 
 
 
+TaskHandle_t BuzzerTaskHandle = NULL; 
 
-
+bool isOpen = false;
 
 
 #define SNOOZEBUTTON_X 270  // Position X of the snooze button (matches batteryStatusBox)
 #define SNOOZEBUTTON_Y 275  // Position Y of the snooze button (matches batteryStatusBox)
 #define SNOOZEBUTTON_W 200  // Width of the snooze button (adjust as needed)
 #define SNOOZEBUTTON_H 50   // Height of the snooze button (adjust as needed)
+
+
+
 
 void drawSnoozeButton() {
   // Draw the snooze button at the given position and size
@@ -240,7 +244,11 @@ static void notifyCallback(BLERemoteCharacteristic* pChar, uint8_t* pData, size_
     BatteryLife = String((char*)pData).substring(0, length);
     Serial.print("Notification received: ");
     Serial.println(BatteryLife);
-    newDataReceived = true;  // Mark new data as received
+
+    if(pChar->getUUID().toString().equals(BATTERY_LIFE_CHARACTERISTIC_UUID)){
+      newDataReceived = true;  // Mark new data as received
+    }
+
 }
 
 void lowBatteryCharmLoop() {
@@ -527,10 +535,12 @@ void sendTemperatureValue() {
 // Call these inside your button press functions
 void openVent() {
     sendVentCommand("OPEN\0");
+    isOpen = true;
 }
 
 void closeVent() {
     sendVentCommand("CLOSE\0");
+    isOpen = false;
 }
 
 //breakpoint 1000
@@ -701,7 +711,15 @@ void handleBluetooth() {
         BLEDevice::getScan()->start(0);
         wasConnected = false; // Update status so it prints again when reconnected
     }
+
+    // Print connection status every time it's checked
+    // if (isConnected) {
+    //     Serial.println("Connected");
+    // } else {
+    //     Serial.println("Not connected");
+    // }
 }
+
 
 
 
@@ -1374,20 +1392,27 @@ void displaySensorData() {
 
                 //displayCO2(co2);
                 co2Readings[co2Index] = co2;
-                co2Index = (co2Index + 1) % 5;
+                co2Index = (co2Index + 1) % 2;    //changed it to 2 from 5
 
+                //changed it to from 5 to 2
                 int totalCO2 = 0;
-                for (int i = 0; i < 5; i++) {
+                for (int i = 0; i < 2; i++) {
                     totalCO2 += co2Readings[i];
                 }
 
                 // Calculate average CO2 reading
-                int avgCO2 = totalCO2 / 5;
+                int avgCO2 = totalCO2 / 2;
 
                 // If the average CO2 level exceeds the threshold, trigger the alarm
-if (co2 > 1800) {
+if (avgCO2 > 1800) {
     if (!actionTriggered) {
         actionTriggered = true;
+
+        //change this later 
+        //isOpen = true;
+        openVent();
+        
+        
         //drawStatusBox(10, 275, "High CO2 LEVEL!", TFT_RED); //moving the position of this fown fopt now
         //breakpoint b4 this everything works
         
@@ -1527,7 +1552,47 @@ tft.fillScreen(0x0841);
 
 
 
+// BuzzerTask: runs in parallel on the ESP32, handling all blocking buzzer calls.
+void BuzzerTask(void* pvParameters) {
+  for (;;) {
+    // 1) If we have batteryLow (and not snoozed), play low battery charm
+    if (batteryLow && !snoozeActive) {
+      Serial.println("Low Battery Charm Activated (BuzzerTask)...");
+      lowBatteryCharm();  // blocking melody
+      // Once done, if batteryLow is still set, we’ll repeat next loop iteration.
+      // If user set snoozeActive or battery recovers, we skip next time.
 
+      // A small yield
+      vTaskDelay(1 / portTICK_PERIOD_MS);
+      snoozeActive = true;
+    }
+
+    else if (!batteryLow && snoozeActive){
+      snoozeActive = false;
+    }
+    // 2) If high CO2 triggered
+    else if (actionTriggered) {
+      Serial.println("High CO2 alarm (BuzzerTask)...");
+      // The old for-loop with frequency sweep
+      for (int i = 4000; i <= 5500; i += 8) {
+        ledcAnalogWrite(BUZZER, 200);
+        ledcChangeFrequency(BUZZER, i, 12);
+
+        // If actionTriggered gets turned off by main loop, break
+        if (!actionTriggered) break;
+        // yield
+        vTaskDelay(5000);
+      }
+      // After done, turn off buzzer
+      ledcAnalogWrite(BUZZER, 0);
+    } else {
+      // If neither batteryLow nor actionTriggered, do nothing
+      // but don’t hog CPU
+      ledcAnalogWrite(BUZZER, 0);
+      vTaskDelay(1 / portTICK_PERIOD_MS);
+    }
+  }
+}
 
 
 void print_pinout() {
@@ -1705,6 +1770,18 @@ void loop() {
   lame();
   delay(100); // Reduce the delay for better responsiveness
   handleBluetooth();
+
+  
+    // Display "Connected" or "Not connected" below the OPEN button
+    /*
+    if (isConnected) {
+        tft.setCursor(10, 260);  // Position below OPEN button
+        tft.print("Connected");
+    } else {
+        tft.setCursor(10, 260);  // Position below OPEN button
+        tft.print("Not connected");
+    }
+    */
 
   if (!actionTriggered){
     displayCO2(co2);
