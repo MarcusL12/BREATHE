@@ -252,160 +252,6 @@ void lowBatteryCharmLoop() {
   }
 }
 
-void low_power_song_pt1 () {
-  restNote(quarter_note_length / 2);
-  // measure 1/2
-  for (int i = 0; i < 3; i++) {
-    playNote(NOTE_G, quarter_note_length / 2, 4);
-  }
-}
-
-void low_power_song_pt2 () {
-  // measure 2
-    playNote(NOTE_Eb, quarter_note_length * 3, 4);
-}
-
-void low_power_song_pt3 () {
-  // measure 3
-  restNote(quarter_note_length / 2);
-}
-
-void low_power_song_pt4 () {
-  // measure 4
-    for (int i = 0; i < 3; i++) {
-    playNote(NOTE_F, quarter_note_length / 2, 4);
-  }
-}
-
-void low_power_song_pt5 () {
-  // measure 5
-  playNote(NOTE_D, quarter_note_length * 3, 4);
-}
-
-void low_power_song_pt6 () {
-   // measure 6
-  restNote(quarter_note_length / 2);
-  for (int i = 0; i < 3; i++) {
-    playNote(NOTE_G, quarter_note_length / 2, 4);
-  }
-}
-
-void low_power_song_pt7 () {
-    // measure 7
-  playNote(NOTE_Eb, quarter_note_length / 2, 4);
-  for (int i = 0; i < 3; i++) {
-    playNote(NOTE_Ab, quarter_note_length / 2, 4);
-  }
-}
-
-void low_power_song_pt8 () {
-    //measure 8
-  playNote(NOTE_G, quarter_note_length / 2, 4);
-  for (int i = 0; i < 3; i++) {
-    playNote(NOTE_Eb, quarter_note_length / 2, 5);
-  }
-}
-
-void low_power_song_pt9 () {
-    // measure 9
-  playNote_legato(NOTE_C, quarter_note_length * 2, 5);
-}
-
-void low_power_song_pt10 () {
-    //measure 10
-  playNote(NOTE_C, quarter_note_length / 2, 5);
-  for (int i = 0; i < 3; i++) {
-    playNote(NOTE_G, quarter_note_length / 2, 4);
-  }
-}
-
-void low_power_song_pt11 () {
-    //measure 11
-  playNote(NOTE_D, quarter_note_length / 2, 4);
-  for (int i = 0; i < 3; i++) {
-    playNote(NOTE_Ab, quarter_note_length / 2, 4);
-  }
-}
-
-void low_power_song_pt12 () {
-    //measure 12
-  playNote(NOTE_G, quarter_note_length / 2, 4);
-  for (int i = 0; i < 3; i++) {
-    playNote(NOTE_F, quarter_note_length / 2, 5);
-  }
-}
-
-void low_power_song_pt13 () {
-    //measure 13
-  playNote(NOTE_D, quarter_note_length * 2, 5);
-}
-
-void low_power_song_pt14 () {
-  playNote(NOTE_D, quarter_note_length / 2, 5);
-  for (int i = 0; i < 2; i++) {
-    playNote(NOTE_G, quarter_note_length / 2, 5);
-  }
-  playNote(NOTE_F, quarter_note_length / 2, 5);
-}
-
-void low_power_song_pt15 () {
-    //measure 15
-  playNote(NOTE_Eb, quarter_note_length * 2, 5);
-}
-
-void low_power_song_pt16 () {
-    //measure 16
-  playNote(NOTE_D, quarter_note_length / 2, 5);
-  for (int i = 0; i < 2; i++) {
-    playNote(NOTE_G, quarter_note_length / 2, 5);
-  }
-}
-
-void low_power_song_pt17 () {
-    //measure 17
-  playNote(NOTE_Eb, quarter_note_length * 2, 5);
-}
-
-void low_power_song_pt18 () {
-    //measure 18
-  playNote(NOTE_D, quarter_note_length / 2, 5);
-  for (int i = 0; i < 2; i++) {
-    playNote(NOTE_G, quarter_note_length / 2, 5);
-  }
-  playNote(NOTE_F, quarter_note_length / 2, 5);
-}
-
-void low_power_song_pt19 () {
-    //measure 19
-  playNote(NOTE_Eb, quarter_note_length, 5);
-  restNote(quarter_note_length);
-}
-
-void low_power_song_pt20 () {
-    //measure 20
-  playNote(NOTE_C, quarter_note_length, 5);
-  restNote(quarter_note_length);
-}
-
-void low_power_song_pt21 () {
-    //measure 21
-  playNote(NOTE_G, quarter_note_length * 3, 5);
-}
-
-void low_power_song_pt22 () {
-    //measure 22
-  restNote(quarter_note_length / 2);
-  for (int i = 0; i < 3; i++) {
-    playNote(NOTE_Ab, quarter_note_length / 2, 5);
-  }
-}
-
-void low_power_song_pt23 () {
-    //measure 23
-  playNote(NOTE_F, quarter_note_length * 6, 5);
-}
-
-
 void lame(){
     if (!newDataReceived) {
         return;  // If no new data, do nothing
@@ -1835,6 +1681,16 @@ ledcWrite(BUZZER, 0);  //initially have the buzzer off.
 
   //tft.fillRect(156, 40, 900, 234,TFT_GREEN);
 
+  // --- FreeRTOS: Create BuzzerTask pinned to core 1 (or 0)
+  xTaskCreatePinnedToCore(
+    BuzzerTask,      // function
+    "BuzzerTask",    // name
+    4096,            // stack size
+    NULL,            // param
+    1,               // priority
+    &BuzzerTaskHandle,
+    1                // run on core 1 (or 0)
+  );
 
 }
 
@@ -1854,7 +1710,7 @@ void loop() {
     displayCO2(co2);
     displayTemperature(temperatureF);
   }
-  if (actionTriggered) {
+  else if (actionTriggered) {
     displayCO2red(co2);
     displayTemperatureRed(temperatureF);
         for (int i = 4000; i <= 5500; i += 8) {
@@ -1922,82 +1778,6 @@ if (batteryLow && !snoozeActive) {
 Serial.print("Buzzer Frequency: ");
 Serial.println(buzzerFrequency); // Print the buzzer frequency
     // Handle low battery song play
-    switch (song_pt) {
-      case 1:
-        low_power_song_pt1();
-        break;
-      case 2:
-        low_power_song_pt2();
-        break;
-      case 3:
-        low_power_song_pt3();
-        break;
-      case 4:
-        low_power_song_pt4();
-        break;
-      case 5:
-        low_power_song_pt5();
-        break;
-      case 6:
-        low_power_song_pt6();
-        break;
-      case 7:
-        low_power_song_pt7();
-        break;
-      case 8:
-        low_power_song_pt8();
-        break;
-      case 9:
-        low_power_song_pt9();
-        break;
-      case 10:
-        low_power_song_pt10();
-        break;
-      case 11:
-        low_power_song_pt11();
-        break;
-      case 12:
-        low_power_song_pt12();
-        break;
-      case 13:
-        low_power_song_pt13();
-        break;
-      case 14:
-        low_power_song_pt14();
-        break;
-      case 15:
-        low_power_song_pt15();
-        break;
-      case 16:
-        low_power_song_pt16();
-        break;
-      case 17:
-        low_power_song_pt17();
-        break;
-      case 18:
-        low_power_song_pt18();
-        break;
-      case 19:
-        low_power_song_pt19();
-        break;
-      case 20:
-        low_power_song_pt20();
-        break;
-      case 21:
-        low_power_song_pt21();
-        break;
-      case 22:
-        low_power_song_pt22();
-        break;
-      case 23:
-        low_power_song_pt23();
-        break;
-      default:
-        song_pt = 1;
-        break;
-    }
-    song_pt++;
-
     // Check if touch is detected first
     uint16_t x, y;
     if (tft.getTouch(&x, &y)) {
@@ -2021,7 +1801,6 @@ Serial.println(buzzerFrequency); // Print the buzzer frequency
     Serial.println(snoozeActive);
   }
 */
-  
 
   // Handle snooze and buzzer logic
   //handleSnooze();  // Continuously check and handle snooze functionality
