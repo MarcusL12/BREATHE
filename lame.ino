@@ -209,6 +209,9 @@ const unsigned long snoozeDuration = 5000;
 
 
 TaskHandle_t BuzzerTaskHandle = NULL; 
+TaskHandle_t LCDTouchTaskHandle = NULL; 
+TaskHandle_t SensorDataTaskHandle = NULL
+
 
 bool isOpen = false;
 
@@ -1344,11 +1347,12 @@ unsigned long lastBuzzerUpdate = 0;
 int currentFrequency = 4000;
 bool increasingFrequency = true;
 
-
-void displaySensorData() {
-    static unsigned long lastSensorReadTime = 0;  // To keep track of when to read the sensors again
-    unsigned long currentMillis = millis();  // Current time
-
+void SensorDataTask(void* pvParameters) {
+  static unsigned long lastSensorReadTime;
+  unsigned long currentMillis;
+  for (;;) {
+    lastSensorReadTime = 0; // To keep track of when to read the sensors again
+    currentMillis = millis(); // Current Time
     // Only read the sensors every 2 seconds (adjust as necessary)
     if (currentMillis - lastSensorReadTime >= sensorReadInterval) {
         lastSensorReadTime = currentMillis;  // Update the last read time
@@ -1406,132 +1410,130 @@ void displaySensorData() {
                 int avgCO2 = totalCO2 / 2;
 
                 // If the average CO2 level exceeds the threshold, trigger the alarm
-if (avgCO2 > 18) {    //changed to 18
-    if (!actionTriggered) {
-        actionTriggered = true;
+            if (avgCO2 > 18) {    //changed to 18
+              if (!actionTriggered) {
+                actionTriggered = true;
 
-        //change this later 
-        //isOpen = true;
-        openVent();
-        ventStatus = "OPEN";
-        
-        
-        //drawStatusBox(10, 275, "High CO2 LEVEL!", TFT_RED); //moving the position of this fown fopt now
-        //breakpoint b4 this everything works
-        
-        //Re-render the screen again but make the background red.
-        //tft.fillRect(40, 40, 100, 100,TFT_GREEN);
+                //change this later 
+                //isOpen = true;
+                openVent();
+                ventStatus = "OPEN";
+                
+              
+                //drawStatusBox(10, 275, "High CO2 LEVEL!", TFT_RED); //moving the position of this fown fopt now
+                //breakpoint b4 this everything works
+                
+                //Re-render the screen again but make the background red.
+                //tft.fillRect(40, 40, 100, 100,TFT_GREEN);
 
-        
-        //for top bar
-tft.fillScreen(0x0841);
-        tft.fillRect(0,40, 155,300, 0x1082);
-        tft.fillRect(0,275,700,200, 0x18c3);
+                
+                //for top bar
+                tft.fillScreen(0x0841);
+                tft.fillRect(0,40, 155,300, 0x1082);
+                tft.fillRect(0,275,700,200, 0x18c3);
 
-        sprite.createSprite(320, 40);   // Size to match the "BREATHE Dashboard" section
-        sprite.loadFont(inter);         // Load custom font (inter)
-        sprite.setTextDatum(4);         // Set text alignment to center
+                sprite.createSprite(320, 40);   // Size to match the "BREATHE Dashboard" section
+                sprite.loadFont(inter);         // Load custom font (inter)
+                sprite.setTextDatum(4);         // Set text alignment to center
 
-        // Draw BREATHE Dashboard Title
-        sprite.fillSprite(TFT_BLACK);   
-        sprite.setTextColor(TFT_WHITE);
-        sprite.setTextSize(1);  
-        sprite.drawString("B.R.E.A.T.H.E", 78, 24);  
-        sprite.pushSprite(0, 0);  
-
- 
-
-        sprite.fillSprite(TFT_BLACK);
-        sprite.pushSprite(280,0);
-
-        sprite.fillSprite(TFT_BLACK);
-        sprite.setTextColor(TFT_WHITE);
-        sprite.drawString(" SET", 105, 24);
-        sprite.pushSprite(320, 0);
-
-        tft.fillRect(156, 40, 900, 234,TFT_RED);
-
-        greenBtn();
-        drawPlusMinusButtons();
-        drawValueRed();
-        drawSetButton();  // Update Set button appearance
-
-        drawVentStatus();
-        
-        displayCO2red(co2);
-        displayTemperatureRed(temperatureF);
-        
+                // Draw BREATHE Dashboard Title
+                sprite.fillSprite(TFT_BLACK);   
+                sprite.setTextColor(TFT_WHITE);
+                sprite.setTextSize(1);  
+                sprite.drawString("B.R.E.A.T.H.E", 78, 24);  
+                sprite.pushSprite(0, 0);  
 
         
-        if(batteryLow){
-          batteryStatusBox(8, 275, "Low Battery!", TFT_ORANGE);
-        }
 
-        else if (batteryDead){
-          batteryStatusBox(8, 275, "    Battery Dead!", TFT_ORANGE);
-        }
+                sprite.fillSprite(TFT_BLACK);
+                sprite.pushSprite(280,0);
 
-        else {
-          drawStatusBox(10, 275, "High CO2 LEVEL!", 0x18c3);
-        }
+                sprite.fillSprite(TFT_BLACK);
+                sprite.setTextColor(TFT_WHITE);
+                sprite.drawString(" SET", 105, 24);
+                sprite.pushSprite(320, 0);
 
-        if(!isOpen){
-          closeVent();
-          ventStatus = "OPEN";
-        }
+                tft.fillRect(156, 40, 900, 234,TFT_RED);
 
+                greenBtn();
+                drawPlusMinusButtons();
+                drawValueRed();
+                drawSetButton();  // Update Set button appearance
+
+                drawVentStatus();
+                
+                displayCO2red(co2);
+                displayTemperatureRed(temperatureF);
+        
+                if(batteryLow){
+                  batteryStatusBox(8, 275, "Low Battery!", TFT_ORANGE);
+                }
+
+                else if (batteryDead){
+                  batteryStatusBox(8, 275, "    Battery Dead!", TFT_ORANGE);
+                }
+
+                else {
+                  drawStatusBox(10, 275, "High CO2 LEVEL!", 0x18c3);
+                }
+
+                if(!isOpen){
+                  closeVent();
+                  ventStatus = "OPEN";
+                }
+
+              }
+    } else {
+        if (actionTriggered) {
+            actionTriggered = false;
+            drawStatusBox(10, 275, "Normal CO2 Levels :)", 0x18c3);
+            
+            tft.fillScreen(0x0841);
+            tft.fillRect(0,40, 155,300, 0x1082);
+            tft.fillRect(0,275,700,200, 0x18c3);
+
+            sprite.createSprite(320, 40);   // Size to match the "BREATHE Dashboard" section
+            sprite.loadFont(inter);         // Load custom font (inter)
+            sprite.setTextDatum(4);         // Set text alignment to center
+
+            // Draw BREATHE Dashboard Title
+            sprite.fillSprite(TFT_BLACK);   
+            sprite.setTextColor(TFT_WHITE);
+            sprite.setTextSize(1);  
+            sprite.drawString("B.R.E.A.T.H.E", 78, 24);  
+            sprite.pushSprite(0, 0);  
+
+    
+
+            sprite.fillSprite(TFT_BLACK);
+            sprite.pushSprite(280,0);
+
+            sprite.fillSprite(TFT_BLACK);
+            sprite.setTextColor(TFT_WHITE);
+            sprite.drawString(" SET", 105, 24);
+            sprite.pushSprite(320, 0);
+
+            greenBtn();
+            drawPlusMinusButtons();
+            drawValue();
+            drawSetButton();  // Update Set button appearance
+
+            drawVentStatus();
+            displayCO2(co2);
+          }
+        } 
+
+        // Print all data on the same line
+        Serial.print("CO2: ");
+        Serial.print(co2);
+        Serial.print("\tTemperature: ");
+        Serial.print(temperatureF);
+        Serial.print(" °F\tAvg CO2: ");
+        Serial.print(avgCO2);
+        Serial.print("\tVent: ");
+        Serial.println(ventStatus);  // Print the vent status
+      }
     }
-} else {
-    if (actionTriggered) {
-        actionTriggered = false;
-        drawStatusBox(10, 275, "Normal CO2 Levels :)", 0x18c3);
-        
-        tft.fillScreen(0x0841);
-        tft.fillRect(0,40, 155,300, 0x1082);
-        tft.fillRect(0,275,700,200, 0x18c3);
-
-        sprite.createSprite(320, 40);   // Size to match the "BREATHE Dashboard" section
-        sprite.loadFont(inter);         // Load custom font (inter)
-        sprite.setTextDatum(4);         // Set text alignment to center
-
-        // Draw BREATHE Dashboard Title
-        sprite.fillSprite(TFT_BLACK);   
-        sprite.setTextColor(TFT_WHITE);
-        sprite.setTextSize(1);  
-        sprite.drawString("B.R.E.A.T.H.E", 78, 24);  
-        sprite.pushSprite(0, 0);  
-
- 
-
-        sprite.fillSprite(TFT_BLACK);
-        sprite.pushSprite(280,0);
-
-        sprite.fillSprite(TFT_BLACK);
-        sprite.setTextColor(TFT_WHITE);
-        sprite.drawString(" SET", 105, 24);
-        sprite.pushSprite(320, 0);
-
-        greenBtn();
-        drawPlusMinusButtons();
-        drawValue();
-        drawSetButton();  // Update Set button appearance
-
-        drawVentStatus();
-        displayCO2(co2);
-    }
-}
-
-                // Print all data on the same line
-                Serial.print("CO2: ");
-                Serial.print(co2);
-                Serial.print("\tTemperature: ");
-                Serial.print(temperatureF);
-                Serial.print(" °F\tAvg CO2: ");
-                Serial.print(avgCO2);
-                Serial.print("\tVent: ");
-                Serial.println(ventStatus);  // Print the vent status
-            }
-        }
 
         // Vent control based on temperature and CO2 thresholds
         if (SwitchOn) {  // Autonomous mode - apply threshold logic
@@ -1552,7 +1554,9 @@ tft.fillScreen(0x0841);
             }
         }
     }
+  }
 }
+
 // LCDTouchTask: Handles any touch, with the highest priority
 void LCDTouchTask (void *pvParameters) {
   for (;;) {
@@ -1880,8 +1884,18 @@ ledcWrite(BUZZER, 0);  //initially have the buzzer off.
     "LCDTouchTask",    // name
     4096,            // stack size
     NULL,            // param
-    7,               // priority
-    &BuzzerTaskHandle,
+    3,               // priority
+    &LCDTouchTaskHandle,
+    1                // run on core 1 (or 0)
+  );
+
+    xTaskCreatePinnedToCore(
+    SensorDataTask,      // function
+    "SensorDataTask",    // name
+    4096,            // stack size
+    NULL,            // param
+    2,               // priority
+    &SensorDataTaskHandle,
     1                // run on core 1 (or 0)
   );
 }
@@ -1891,8 +1905,6 @@ unsigned long debounceDelay = 30;  // 50ms debounce time
 void loop() {
   //lowBatteryCharm();
   //print_pinout();
-  uint16_t x, y;
-  displaySensorData();
   //temp();
   lame();
   delay(100); // Reduce the delay for better responsiveness
