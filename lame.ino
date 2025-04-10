@@ -1406,7 +1406,7 @@ void displaySensorData() {
                 int avgCO2 = totalCO2 / 2;
 
                 // If the average CO2 level exceeds the threshold, trigger the alarm
-if (avgCO2 > 1800) {
+if (avgCO2 > 18) {    //changed to 18
     if (!actionTriggered) {
         actionTriggered = true;
 
@@ -1553,8 +1553,115 @@ tft.fillScreen(0x0841);
         }
     }
 }
+// LCDTouchTask: Handles any touch, with the highest priority
+void LCDTouchTask (void *pvParameters) {
+  for (;;) {
+    static unsigned long lastDebounceTime = 0;  // For debouncing
+    unsigned long debounceDelay = 30;  // 50ms debounce time
+    uint16_t x, y;
+    if (tft.getTouch(&x, &y)) {
+    // Check for debounce
+    if ((millis() - lastDebounceTime) > debounceDelay) {
+      lastDebounceTime = millis();  // Record the time of the last valid press
 
+      // Draw a block spot to show where touch was calculated to be
+      #ifdef BLACK_SPOT
+        tft.fillCircle(x, y, 2, TFT_BLACK);
+      #endif
+      //breakpoint 5
 
+      if (SwitchOn) {
+        if ((x > REDBUTTON_X) && (x < (REDBUTTON_X + REDBUTTON_W))) {
+          if ((y > REDBUTTON_Y) && (y <= (REDBUTTON_Y + REDBUTTON_H))) {
+            Serial.println("Red btn hit");
+            redBtn();
+          }
+        }
+      } 
+      
+      else {  // Record is off (SwitchOn == false)
+        if ((x > GREENBUTTON_X) && (x < (GREENBUTTON_X + GREENBUTTON_W))) {
+          if ((y > GREENBUTTON_Y) && (y <= (GREENBUTTON_Y + GREENBUTTON_H))) {
+            Serial.println("Green btn hit");
+            greenBtn();
+          }
+        }
+      }
+      // Test button action (only in Manual mode)
+      if (SwitchOn && (x > TESTBUTTON_X) && (x < (TESTBUTTON_X + TESTBUTTON_W))) {
+        if ((y > TESTBUTTON_Y) && (y <= (TESTBUTTON_Y + TESTBUTTON_H))) {
+          Serial.println("Test Button hit");
+        }
+      }
+      Serial.println(SwitchOn);
+
+      if ((x > MINUSBUTTON_X) && (x < (MINUSBUTTON_X + BUTTON_WIDTH))) {
+        if ((y > MINUSBUTTON_Y) && (y <= (MINUSBUTTON_Y + BUTTON_HEIGHT))) {
+          if (currentValue > 55) {
+            currentValue--;
+            drawValue();
+          }
+        }
+      }
+
+      if ((x > PLUSBUTTON_X) && (x < (PLUSBUTTON_X + BUTTON_WIDTH))) {
+        if ((y > PLUSBUTTON_Y) && (y <= (PLUSBUTTON_Y + BUTTON_HEIGHT))) {
+          if (currentValue < 85) {
+            currentValue++;
+            drawValue();
+          }
+        }
+      }
+
+      if ((x > SETBUTTON_X) && (x < (SETBUTTON_X + SETBUTTON_W))) {
+              if ((y > SETBUTTON_Y) && (y <= (SETBUTTON_Y + SETBUTTON_H))) {
+                float currentTemperatureF = (float)currentValue;  // Use the currentValue as the temperature in Fahrenheit
+                
+                // Get the vent angle corresponding to the temperature
+                int ventAngle = getVentAngle(currentTemperatureF);
+
+                // Print the temperature and vent angle to the Serial Monitor
+                /*
+                Serial.print("Temperature: ");
+                Serial.print(currentTemperatureF);
+                Serial.print(" °F, Vent Angle: ");
+                Serial.println(ventAngle);
+                */
+          }
+        }
+
+      if ((x > SETBUTTON_X) && (x < (SETBUTTON_X + SETBUTTON_W))) {
+          if ((y > SETBUTTON_Y) && (y <= (SETBUTTON_Y + SETBUTTON_H))) {
+              if (SwitchOn) {  // Only allow in Autonomous Mode
+                  Serial.print("Sending temperature setting: ");
+                  Serial.println(currentValue);
+                  sendTemperatureValue();  // Send value over BLE
+              }
+          }
+      }
+
+      if ((x > OPENBUTTON_X) && (x < (OPENBUTTON_X + BUTTON_W)) &&
+          (y > OPENBUTTON_Y) && (y <= (OPENBUTTON_Y + BUTTON_H))) {
+          Serial.println("Vent Status: OPEN");
+          ventStatus = "OPEN";  // Update status
+          drawVentStatus();  // Refresh text
+          openVent();
+      }
+
+      // Close Button Pressed
+      if ((x > CLOSEBUTTON_X) && (x < (CLOSEBUTTON_X + BUTTON_W)) &&
+          (y > CLOSEBUTTON_Y) && (y <= (CLOSEBUTTON_Y + BUTTON_H))) {
+          Serial.println("Vent Status: CLOSE");
+          ventStatus = "CLOSE";  // Update status
+          drawVentStatus();  // Refresh text
+          closeVent();
+      }
+      //snooze button
+    }
+    // Continuously display sensor data
+    }
+  }
+}
 
 
 
@@ -1768,14 +1875,23 @@ ledcWrite(BUZZER, 0);  //initially have the buzzer off.
     1                // run on core 1 (or 0)
   );
 
+  xTaskCreatePinnedToCore(
+    LCDTouchTask,      // function
+    "LCDTouchTask",    // name
+    4096,            // stack size
+    NULL,            // param
+    7,               // priority
+    &BuzzerTaskHandle,
+    1                // run on core 1 (or 0)
+  );
 }
 
+static unsigned long lastDebounceTime = 0;  // For debouncing
+unsigned long debounceDelay = 30;  // 50ms debounce time
 void loop() {
   //lowBatteryCharm();
   //print_pinout();
   uint16_t x, y;
-  static unsigned long lastDebounceTime = 0;  // For debouncing
-  unsigned long debounceDelay = 30;  // 50ms debounce time
   displaySensorData();
   //temp();
   lame();
@@ -1892,119 +2008,6 @@ Serial.println(buzzerFrequency); // Print the buzzer frequency
 
   // Handle snooze and buzzer logic
   //handleSnooze();  // Continuously check and handle snooze functionality
- 
-
-  // See if there's any touch data for us
-  if (tft.getTouch(&x, &y)) {
-    // Check for debounce
-    if ((millis() - lastDebounceTime) > debounceDelay) {
-      lastDebounceTime = millis();  // Record the time of the last valid press
-
-      // Draw a block spot to show where touch was calculated to be
-      #ifdef BLACK_SPOT
-        tft.fillCircle(x, y, 2, TFT_BLACK);
-      #endif
-
-        
-
-  //breakpoint 5
-
-
-      
-      if (SwitchOn) {
-        if ((x > REDBUTTON_X) && (x < (REDBUTTON_X + REDBUTTON_W))) {
-          if ((y > REDBUTTON_Y) && (y <= (REDBUTTON_Y + REDBUTTON_H))) {
-            Serial.println("Red btn hit");
-            redBtn();
-          }
-        }
-      } 
-      
-      else {  // Record is off (SwitchOn == false)
-        if ((x > GREENBUTTON_X) && (x < (GREENBUTTON_X + GREENBUTTON_W))) {
-          if ((y > GREENBUTTON_Y) && (y <= (GREENBUTTON_Y + GREENBUTTON_H))) {
-            Serial.println("Green btn hit");
-            greenBtn();
-          }
-        }
-      }
-
-      // Test button action (only in Manual mode)
-      if (SwitchOn && (x > TESTBUTTON_X) && (x < (TESTBUTTON_X + TESTBUTTON_W))) {
-        if ((y > TESTBUTTON_Y) && (y <= (TESTBUTTON_Y + TESTBUTTON_H))) {
-          Serial.println("Test Button hit");
-        }
-      }
-      Serial.println(SwitchOn);
-
-      if ((x > MINUSBUTTON_X) && (x < (MINUSBUTTON_X + BUTTON_WIDTH))) {
-        if ((y > MINUSBUTTON_Y) && (y <= (MINUSBUTTON_Y + BUTTON_HEIGHT))) {
-          if (currentValue > 55) {
-            currentValue--;
-            drawValue();
-          }
-        }
-      }
-
-      if ((x > PLUSBUTTON_X) && (x < (PLUSBUTTON_X + BUTTON_WIDTH))) {
-        if ((y > PLUSBUTTON_Y) && (y <= (PLUSBUTTON_Y + BUTTON_HEIGHT))) {
-          if (currentValue < 85) {
-            currentValue++;
-            drawValue();
-          }
-        }
-      }
-
-      if ((x > SETBUTTON_X) && (x < (SETBUTTON_X + SETBUTTON_W))) {
-              if ((y > SETBUTTON_Y) && (y <= (SETBUTTON_Y + SETBUTTON_H))) {
-                float currentTemperatureF = (float)currentValue;  // Use the currentValue as the temperature in Fahrenheit
-                
-                // Get the vent angle corresponding to the temperature
-                int ventAngle = getVentAngle(currentTemperatureF);
-
-                // Print the temperature and vent angle to the Serial Monitor
-                /*
-                Serial.print("Temperature: ");
-                Serial.print(currentTemperatureF);
-                Serial.print(" °F, Vent Angle: ");
-                Serial.println(ventAngle);
-                */
-          }
-        }
-
-            if ((x > SETBUTTON_X) && (x < (SETBUTTON_X + SETBUTTON_W))) {
-                if ((y > SETBUTTON_Y) && (y <= (SETBUTTON_Y + SETBUTTON_H))) {
-                    if (SwitchOn) {  // Only allow in Autonomous Mode
-                        Serial.print("Sending temperature setting: ");
-                        Serial.println(currentValue);
-                        sendTemperatureValue();  // Send value over BLE
-                    }
-                }
-            }
-
-      if ((x > OPENBUTTON_X) && (x < (OPENBUTTON_X + BUTTON_W)) &&
-          (y > OPENBUTTON_Y) && (y <= (OPENBUTTON_Y + BUTTON_H))) {
-          Serial.println("Vent Status: OPEN");
-          ventStatus = "OPEN";  // Update status
-          drawVentStatus();  // Refresh text
-          openVent();
-      }
-
-// Close Button Pressed
-      if ((x > CLOSEBUTTON_X) && (x < (CLOSEBUTTON_X + BUTTON_W)) &&
-          (y > CLOSEBUTTON_Y) && (y <= (CLOSEBUTTON_Y + BUTTON_H))) {
-          Serial.println("Vent Status: CLOSE");
-          ventStatus = "CLOSE";  // Update status
-          drawVentStatus();  // Refresh text
-          closeVent();
-      }
-//snooze button
-
-    }
-  
-  // Continuously display sensor data
-
-  }
 /*
     if (!isConnected) {
         Serial.println("Scanning for Vent...");
