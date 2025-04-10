@@ -1384,6 +1384,7 @@ void HandleBluetoothTask (void* pvParameters) {
 
 void SensorDataTask(void* pvParameters) {
   static unsigned long lastSensorReadTime = 0; // To keep track of when to read the sensors again
+  const unsigned long sensorReadInterval = 2000;  // 2 seconds interval for both sensors
   unsigned long currentMillis;
   for (;;) { 
     currentMillis = millis(); // Current Time
