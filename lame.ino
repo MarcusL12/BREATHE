@@ -503,7 +503,7 @@ void startBLEScan() {
     pBLEScan->setInterval(1349);
     pBLEScan->setWindow(449);
     pBLEScan->setActiveScan(true);
-    pBLEScan->start(5, false);
+    pBLEScan->start(0, false);
 }
 
 void sendVentCommand(String command) {
@@ -535,11 +535,13 @@ void sendTemperatureValue() {
 // Call these inside your button press functions
 void openVent() {
     sendVentCommand("OPEN\0");
+    ventStatus = "OPEN";
     isOpen = true;
 }
 
 void closeVent() {
     sendVentCommand("CLOSE\0");
+    ventStatus = "CLOSE";
     isOpen = false;
 }
 
@@ -1411,6 +1413,7 @@ if (avgCO2 > 1800) {
         //change this later 
         //isOpen = true;
         openVent();
+        ventStatus = "OPEN";
         
         
         //drawStatusBox(10, 275, "High CO2 LEVEL!", TFT_RED); //moving the position of this fown fopt now
@@ -1470,6 +1473,11 @@ tft.fillScreen(0x0841);
 
         else {
           drawStatusBox(10, 275, "High CO2 LEVEL!", 0x18c3);
+        }
+
+        if(!isOpen){
+          closeVent();
+          ventStatus = "OPEN";
         }
 
     }
@@ -1536,9 +1544,9 @@ tft.fillScreen(0x0841);
                 ventStatus = "OPEN";
                 drawVentStatus();
                 Serial.println("Above Threshold, FBI OPEN UP!");
-            } else if (temperatureF < thresholdLow && ventStatus != "CLOSED") {
+            } else if (temperatureF < thresholdLow && ventStatus != "CLOSE" && !actionTriggered) {
                 closeVent();
-                ventStatus = "CLOSED";
+                ventStatus = "CLOSE";
                 drawVentStatus();
                 Serial.println("Below Threshold, Closing");
             }
@@ -1745,6 +1753,9 @@ ledcWrite(BUZZER, 0);  //initially have the buzzer off.
   //sprite.pushSprite(0, 0);
 
   //tft.fillRect(156, 40, 900, 234,TFT_GREEN);
+  esp_err_t errRc=esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT,ESP_PWR_LVL_P9);
+  esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_P9);
+  esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_SCAN ,ESP_PWR_LVL_P9);
 
   // --- FreeRTOS: Create BuzzerTask pinned to core 1 (or 0)
   xTaskCreatePinnedToCore(
@@ -1982,8 +1993,8 @@ Serial.println(buzzerFrequency); // Print the buzzer frequency
 // Close Button Pressed
       if ((x > CLOSEBUTTON_X) && (x < (CLOSEBUTTON_X + BUTTON_W)) &&
           (y > CLOSEBUTTON_Y) && (y <= (CLOSEBUTTON_Y + BUTTON_H))) {
-          Serial.println("Vent Status: CLOSED");
-          ventStatus = "CLOSED";  // Update status
+          Serial.println("Vent Status: CLOSE");
+          ventStatus = "CLOSE";  // Update status
           drawVentStatus();  // Refresh text
           closeVent();
       }
