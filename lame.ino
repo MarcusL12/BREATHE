@@ -1380,6 +1380,7 @@ void HandleBluetoothTask (void* pvParameters) {
     // } else {
     //     Serial.println("Not connected");
     // }
+    vTaskDelay(10 / portTICK_PERIOD_MS); 
     }
 
 }
@@ -1591,6 +1592,7 @@ void SensorDataTask(void* pvParameters) {
             }
         }
     }
+    vTaskDelay(10 / portTICK_PERIOD_MS); 
   }
 }
 
@@ -1701,6 +1703,7 @@ void LCDTouchTask (void *pvParameters) {
     }
     // Continuously display sensor data
     }
+    vTaskDelay(10 / portTICK_PERIOD_MS); 
   }
 }
 
@@ -1719,7 +1722,7 @@ void BuzzerTask(void* pvParameters) {
       // If user set snoozeActive or battery recovers, we skip next time.
 
       // A small yield
-      vTaskDelay(1 / portTICK_PERIOD_MS);
+      vTaskDelay(10 / portTICK_PERIOD_MS);
       snoozeActive = true;
     }
 
