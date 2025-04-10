@@ -1341,9 +1341,6 @@ void checkBatteryAndTriggerBuzzer() {
 
 //breakpoint 
 
-unsigned long lastSensorReadTime = 0;  // Store last sensor read time
-const unsigned long sensorReadInterval = 2000;  // 2 seconds interval for both sensors
-
 unsigned long lastBuzzerUpdate = 0;
 int currentFrequency = 4000;
 bool increasingFrequency = true;
@@ -1386,10 +1383,9 @@ void HandleBluetoothTask (void* pvParameters) {
 }
 
 void SensorDataTask(void* pvParameters) {
-  static unsigned long lastSensorReadTime;
+  static unsigned long lastSensorReadTime = 0; // To keep track of when to read the sensors again
   unsigned long currentMillis;
-  for (;;) {
-    lastSensorReadTime = 0; // To keep track of when to read the sensors again
+  for (;;) { 
     currentMillis = millis(); // Current Time
     // Only read the sensors every 2 seconds (adjust as necessary)
     if (currentMillis - lastSensorReadTime >= sensorReadInterval) {
@@ -1422,7 +1418,7 @@ void SensorDataTask(void* pvParameters) {
         if (error) {
             Serial.print("Error trying to execute getDataReadyFlag(): ");
             Serial.println(error);
-            return;
+            continue;
         }
 
         if (isDataReady) {
