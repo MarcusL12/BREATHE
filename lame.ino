@@ -210,7 +210,7 @@ const unsigned long snoozeDuration = 5000;
 
 TaskHandle_t BuzzerTaskHandle = NULL; 
 TaskHandle_t LCDTouchTaskHandle = NULL; 
-TaskHandle_t SensorDataTaskHandle = NULL
+TaskHandle_t SensorDataTaskHandle = NULL;
 TaskHandle_t HandleBluetoothTaskHandle = NULL;
 
 
@@ -1943,8 +1943,8 @@ ledcWrite(BUZZER, 0);  //initially have the buzzer off.
     NULL,
     2,
     &HandleBluetoothTaskHandle,
-    1
-  )
+    0
+  );
 }
 
 static unsigned long lastDebounceTime = 0;  // For debouncing
