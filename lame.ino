@@ -211,6 +211,7 @@ const unsigned long snoozeDuration = 5000;
 TaskHandle_t BuzzerTaskHandle = NULL; 
 TaskHandle_t LCDTouchTaskHandle = NULL; 
 TaskHandle_t SensorDataTaskHandle = NULL
+TaskHandle_t HandleBluetoothTaskHandle = NULL;
 
 
 bool isOpen = false;
@@ -1347,6 +1348,42 @@ unsigned long lastBuzzerUpdate = 0;
 int currentFrequency = 4000;
 bool increasingFrequency = true;
 
+void HandleBluetoothTask (void* pvParameters) {
+    for (;;) {
+      static bool wasConnected = false; // Tracks previous connection status
+
+    if (doConnect) {
+        if (connectToServer()) {
+            Serial.println("Connected to Vent successfully.");
+            wasConnected = true;
+        } else {
+            Serial.println("Connection to Vent failed.");
+            wasConnected = false;
+        }
+        doConnect = false;
+    }
+
+    if (isConnected) {
+        if (!wasConnected) { // Only print once when connection is first established
+            Serial.println("Vent is already connected.");
+            wasConnected = true; // Update status so it doesn't print again
+        }
+    } else if (doScan) {
+        Serial.println("Restarting BLE scan...");
+        BLEDevice::getScan()->start(0);
+        wasConnected = false; // Update status so it prints again when reconnected
+    }
+
+    // Print connection status every time it's checked
+    // if (isConnected) {
+    //     Serial.println("Connected");
+    // } else {
+    //     Serial.println("Not connected");
+    // }
+    }
+
+}
+
 void SensorDataTask(void* pvParameters) {
   static unsigned long lastSensorReadTime;
   unsigned long currentMillis;
@@ -1889,15 +1926,25 @@ ledcWrite(BUZZER, 0);  //initially have the buzzer off.
     1                // run on core 1 (or 0)
   );
 
-    xTaskCreatePinnedToCore(
-    SensorDataTask,      // function
-    "SensorDataTask",    // name
-    4096,            // stack size
-    NULL,            // param
-    2,               // priority
-    &SensorDataTaskHandle,
-    1                // run on core 1 (or 0)
+  xTaskCreatePinnedToCore(
+  SensorDataTask,      // function
+  "SensorDataTask",    // name
+  4096,            // stack size
+  NULL,            // param
+  2,               // priority
+  &SensorDataTaskHandle,
+  1                // run on core 1 (or 0)
   );
+
+  xTaskCreatePinnedToCore(
+    HandleBluetoothTask,
+    "HandleBluetoothTask",
+    4096,
+    NULL,
+    2,
+    &HandleBluetoothTaskHandle,
+    1
+  )
 }
 
 static unsigned long lastDebounceTime = 0;  // For debouncing
@@ -1908,7 +1955,7 @@ void loop() {
   //temp();
   lame();
   delay(100); // Reduce the delay for better responsiveness
-  handleBluetooth();
+  // handleBluetooth();
 
   
     // Display "Connected" or "Not connected" below the OPEN button
