@@ -209,10 +209,6 @@ const unsigned long snoozeDuration = 5000;
 
 
 TaskHandle_t BuzzerTaskHandle = NULL; 
-TaskHandle_t LCDTouchTaskHandle = NULL; 
-TaskHandle_t SensorDataTaskHandle = NULL
-TaskHandle_t HandleBluetoothTaskHandle = NULL;
-
 
 bool isOpen = false;
 
@@ -1348,48 +1344,11 @@ unsigned long lastBuzzerUpdate = 0;
 int currentFrequency = 4000;
 bool increasingFrequency = true;
 
-void HandleBluetoothTask (void* pvParameters) {
-    for (;;) {
-      static bool wasConnected = false; // Tracks previous connection status
 
-    if (doConnect) {
-        if (connectToServer()) {
-            Serial.println("Connected to Vent successfully.");
-            wasConnected = true;
-        } else {
-            Serial.println("Connection to Vent failed.");
-            wasConnected = false;
-        }
-        doConnect = false;
-    }
+void displaySensorData() {
+    static unsigned long lastSensorReadTime = 0;  // To keep track of when to read the sensors again
+    unsigned long currentMillis = millis();  // Current time
 
-    if (isConnected) {
-        if (!wasConnected) { // Only print once when connection is first established
-            Serial.println("Vent is already connected.");
-            wasConnected = true; // Update status so it doesn't print again
-        }
-    } else if (doScan) {
-        Serial.println("Restarting BLE scan...");
-        BLEDevice::getScan()->start(0);
-        wasConnected = false; // Update status so it prints again when reconnected
-    }
-
-    // Print connection status every time it's checked
-    // if (isConnected) {
-    //     Serial.println("Connected");
-    // } else {
-    //     Serial.println("Not connected");
-    // }
-    }
-
-}
-
-void SensorDataTask(void* pvParameters) {
-  static unsigned long lastSensorReadTime;
-  unsigned long currentMillis;
-  for (;;) {
-    lastSensorReadTime = 0; // To keep track of when to read the sensors again
-    currentMillis = millis(); // Current Time
     // Only read the sensors every 2 seconds (adjust as necessary)
     if (currentMillis - lastSensorReadTime >= sensorReadInterval) {
         lastSensorReadTime = currentMillis;  // Update the last read time
@@ -1447,130 +1406,132 @@ void SensorDataTask(void* pvParameters) {
                 int avgCO2 = totalCO2 / 2;
 
                 // If the average CO2 level exceeds the threshold, trigger the alarm
-            if (avgCO2 > 18) {    //changed to 18
-              if (!actionTriggered) {
-                actionTriggered = true;
+if (avgCO2 > 1800) {
+    if (!actionTriggered) {
+        actionTriggered = true;
 
-                //change this later 
-                //isOpen = true;
-                openVent();
-                ventStatus = "OPEN";
-                
-              
-                //drawStatusBox(10, 275, "High CO2 LEVEL!", TFT_RED); //moving the position of this fown fopt now
-                //breakpoint b4 this everything works
-                
-                //Re-render the screen again but make the background red.
-                //tft.fillRect(40, 40, 100, 100,TFT_GREEN);
-
-                
-                //for top bar
-                tft.fillScreen(0x0841);
-                tft.fillRect(0,40, 155,300, 0x1082);
-                tft.fillRect(0,275,700,200, 0x18c3);
-
-                sprite.createSprite(320, 40);   // Size to match the "BREATHE Dashboard" section
-                sprite.loadFont(inter);         // Load custom font (inter)
-                sprite.setTextDatum(4);         // Set text alignment to center
-
-                // Draw BREATHE Dashboard Title
-                sprite.fillSprite(TFT_BLACK);   
-                sprite.setTextColor(TFT_WHITE);
-                sprite.setTextSize(1);  
-                sprite.drawString("B.R.E.A.T.H.E", 78, 24);  
-                sprite.pushSprite(0, 0);  
+        //change this later 
+        //isOpen = true;
+        openVent();
+        ventStatus = "OPEN";
+        
+        
+        //drawStatusBox(10, 275, "High CO2 LEVEL!", TFT_RED); //moving the position of this fown fopt now
+        //breakpoint b4 this everything works
+        
+        //Re-render the screen again but make the background red.
+        //tft.fillRect(40, 40, 100, 100,TFT_GREEN);
 
         
+        //for top bar
+tft.fillScreen(0x0841);
+        tft.fillRect(0,40, 155,300, 0x1082);
+        tft.fillRect(0,275,700,200, 0x18c3);
 
-                sprite.fillSprite(TFT_BLACK);
-                sprite.pushSprite(280,0);
+        sprite.createSprite(320, 40);   // Size to match the "BREATHE Dashboard" section
+        sprite.loadFont(inter);         // Load custom font (inter)
+        sprite.setTextDatum(4);         // Set text alignment to center
 
-                sprite.fillSprite(TFT_BLACK);
-                sprite.setTextColor(TFT_WHITE);
-                sprite.drawString(" SET", 105, 24);
-                sprite.pushSprite(320, 0);
+        // Draw BREATHE Dashboard Title
+        sprite.fillSprite(TFT_BLACK);   
+        sprite.setTextColor(TFT_WHITE);
+        sprite.setTextSize(1);  
+        sprite.drawString("B.R.E.A.T.H.E", 78, 24);  
+        sprite.pushSprite(0, 0);  
 
-                tft.fillRect(156, 40, 900, 234,TFT_RED);
+ 
 
-                greenBtn();
-                drawPlusMinusButtons();
-                drawValueRed();
-                drawSetButton();  // Update Set button appearance
+        sprite.fillSprite(TFT_BLACK);
+        sprite.pushSprite(280,0);
 
-                drawVentStatus();
-                
-                displayCO2red(co2);
-                displayTemperatureRed(temperatureF);
+        sprite.fillSprite(TFT_BLACK);
+        sprite.setTextColor(TFT_WHITE);
+        sprite.drawString(" SET", 105, 24);
+        sprite.pushSprite(320, 0);
+
+        tft.fillRect(156, 40, 900, 234,TFT_RED);
+
+        greenBtn();
+        drawPlusMinusButtons();
+        drawValueRed();
+        drawSetButton();  // Update Set button appearance
+
+        drawVentStatus();
         
-                if(batteryLow){
-                  batteryStatusBox(8, 275, "Low Battery!", TFT_ORANGE);
-                }
+        displayCO2red(co2);
+        displayTemperatureRed(temperatureF);
+        
 
-                else if (batteryDead){
-                  batteryStatusBox(8, 275, "    Battery Dead!", TFT_ORANGE);
-                }
+        
+        if(batteryLow){
+          batteryStatusBox(8, 275, "Low Battery!", TFT_ORANGE);
+        }
 
-                else {
-                  drawStatusBox(10, 275, "High CO2 LEVEL!", 0x18c3);
-                }
+        else if (batteryDead){
+          batteryStatusBox(8, 275, "    Battery Dead!", TFT_ORANGE);
+        }
 
-                if(!isOpen){
-                  closeVent();
-                  ventStatus = "OPEN";
-                }
+        else {
+          drawStatusBox(10, 275, "High CO2 LEVEL!", 0x18c3);
+        }
 
-              }
-    } else {
-        if (actionTriggered) {
-            actionTriggered = false;
-            drawStatusBox(10, 275, "Normal CO2 Levels :)", 0x18c3);
-            
-            tft.fillScreen(0x0841);
-            tft.fillRect(0,40, 155,300, 0x1082);
-            tft.fillRect(0,275,700,200, 0x18c3);
+        if(!isOpen){
+          closeVent();
+          ventStatus = "OPEN";
+        }
 
-            sprite.createSprite(320, 40);   // Size to match the "BREATHE Dashboard" section
-            sprite.loadFont(inter);         // Load custom font (inter)
-            sprite.setTextDatum(4);         // Set text alignment to center
-
-            // Draw BREATHE Dashboard Title
-            sprite.fillSprite(TFT_BLACK);   
-            sprite.setTextColor(TFT_WHITE);
-            sprite.setTextSize(1);  
-            sprite.drawString("B.R.E.A.T.H.E", 78, 24);  
-            sprite.pushSprite(0, 0);  
-
-    
-
-            sprite.fillSprite(TFT_BLACK);
-            sprite.pushSprite(280,0);
-
-            sprite.fillSprite(TFT_BLACK);
-            sprite.setTextColor(TFT_WHITE);
-            sprite.drawString(" SET", 105, 24);
-            sprite.pushSprite(320, 0);
-
-            greenBtn();
-            drawPlusMinusButtons();
-            drawValue();
-            drawSetButton();  // Update Set button appearance
-
-            drawVentStatus();
-            displayCO2(co2);
-          }
-        } 
-
-        // Print all data on the same line
-        Serial.print("CO2: ");
-        Serial.print(co2);
-        Serial.print("\tTemperature: ");
-        Serial.print(temperatureF);
-        Serial.print(" °F\tAvg CO2: ");
-        Serial.print(avgCO2);
-        Serial.print("\tVent: ");
-        Serial.println(ventStatus);  // Print the vent status
-      }
     }
+} else {
+    if (actionTriggered) {
+        actionTriggered = false;
+        drawStatusBox(10, 275, "Normal CO2 Levels :)", 0x18c3);
+        
+        tft.fillScreen(0x0841);
+        tft.fillRect(0,40, 155,300, 0x1082);
+        tft.fillRect(0,275,700,200, 0x18c3);
+
+        sprite.createSprite(320, 40);   // Size to match the "BREATHE Dashboard" section
+        sprite.loadFont(inter);         // Load custom font (inter)
+        sprite.setTextDatum(4);         // Set text alignment to center
+
+        // Draw BREATHE Dashboard Title
+        sprite.fillSprite(TFT_BLACK);   
+        sprite.setTextColor(TFT_WHITE);
+        sprite.setTextSize(1);  
+        sprite.drawString("B.R.E.A.T.H.E", 78, 24);  
+        sprite.pushSprite(0, 0);  
+
+ 
+
+        sprite.fillSprite(TFT_BLACK);
+        sprite.pushSprite(280,0);
+
+        sprite.fillSprite(TFT_BLACK);
+        sprite.setTextColor(TFT_WHITE);
+        sprite.drawString(" SET", 105, 24);
+        sprite.pushSprite(320, 0);
+
+        greenBtn();
+        drawPlusMinusButtons();
+        drawValue();
+        drawSetButton();  // Update Set button appearance
+
+        drawVentStatus();
+        displayCO2(co2);
+    }
+}
+
+                // Print all data on the same line
+                Serial.print("CO2: ");
+                Serial.print(co2);
+                Serial.print("\tTemperature: ");
+                Serial.print(temperatureF);
+                Serial.print(" °F\tAvg CO2: ");
+                Serial.print(avgCO2);
+                Serial.print("\tVent: ");
+                Serial.println(ventStatus);  // Print the vent status
+            }
+        }
 
         // Vent control based on temperature and CO2 thresholds
         if (SwitchOn) {  // Autonomous mode - apply threshold logic
@@ -1591,118 +1552,9 @@ void SensorDataTask(void* pvParameters) {
             }
         }
     }
-  }
 }
 
-// LCDTouchTask: Handles any touch, with the highest priority
-void LCDTouchTask (void *pvParameters) {
-  for (;;) {
-    static unsigned long lastDebounceTime = 0;  // For debouncing
-    unsigned long debounceDelay = 30;  // 50ms debounce time
-    uint16_t x, y;
-    if (tft.getTouch(&x, &y)) {
-    // Check for debounce
-    if ((millis() - lastDebounceTime) > debounceDelay) {
-      lastDebounceTime = millis();  // Record the time of the last valid press
 
-      // Draw a block spot to show where touch was calculated to be
-      #ifdef BLACK_SPOT
-        tft.fillCircle(x, y, 2, TFT_BLACK);
-      #endif
-      //breakpoint 5
-
-      if (SwitchOn) {
-        if ((x > REDBUTTON_X) && (x < (REDBUTTON_X + REDBUTTON_W))) {
-          if ((y > REDBUTTON_Y) && (y <= (REDBUTTON_Y + REDBUTTON_H))) {
-            Serial.println("Red btn hit");
-            redBtn();
-          }
-        }
-      } 
-      
-      else {  // Record is off (SwitchOn == false)
-        if ((x > GREENBUTTON_X) && (x < (GREENBUTTON_X + GREENBUTTON_W))) {
-          if ((y > GREENBUTTON_Y) && (y <= (GREENBUTTON_Y + GREENBUTTON_H))) {
-            Serial.println("Green btn hit");
-            greenBtn();
-          }
-        }
-      }
-      // Test button action (only in Manual mode)
-      if (SwitchOn && (x > TESTBUTTON_X) && (x < (TESTBUTTON_X + TESTBUTTON_W))) {
-        if ((y > TESTBUTTON_Y) && (y <= (TESTBUTTON_Y + TESTBUTTON_H))) {
-          Serial.println("Test Button hit");
-        }
-      }
-      Serial.println(SwitchOn);
-
-      if ((x > MINUSBUTTON_X) && (x < (MINUSBUTTON_X + BUTTON_WIDTH))) {
-        if ((y > MINUSBUTTON_Y) && (y <= (MINUSBUTTON_Y + BUTTON_HEIGHT))) {
-          if (currentValue > 55) {
-            currentValue--;
-            drawValue();
-          }
-        }
-      }
-
-      if ((x > PLUSBUTTON_X) && (x < (PLUSBUTTON_X + BUTTON_WIDTH))) {
-        if ((y > PLUSBUTTON_Y) && (y <= (PLUSBUTTON_Y + BUTTON_HEIGHT))) {
-          if (currentValue < 85) {
-            currentValue++;
-            drawValue();
-          }
-        }
-      }
-
-      if ((x > SETBUTTON_X) && (x < (SETBUTTON_X + SETBUTTON_W))) {
-              if ((y > SETBUTTON_Y) && (y <= (SETBUTTON_Y + SETBUTTON_H))) {
-                float currentTemperatureF = (float)currentValue;  // Use the currentValue as the temperature in Fahrenheit
-                
-                // Get the vent angle corresponding to the temperature
-                int ventAngle = getVentAngle(currentTemperatureF);
-
-                // Print the temperature and vent angle to the Serial Monitor
-                /*
-                Serial.print("Temperature: ");
-                Serial.print(currentTemperatureF);
-                Serial.print(" °F, Vent Angle: ");
-                Serial.println(ventAngle);
-                */
-          }
-        }
-
-      if ((x > SETBUTTON_X) && (x < (SETBUTTON_X + SETBUTTON_W))) {
-          if ((y > SETBUTTON_Y) && (y <= (SETBUTTON_Y + SETBUTTON_H))) {
-              if (SwitchOn) {  // Only allow in Autonomous Mode
-                  Serial.print("Sending temperature setting: ");
-                  Serial.println(currentValue);
-                  sendTemperatureValue();  // Send value over BLE
-              }
-          }
-      }
-
-      if ((x > OPENBUTTON_X) && (x < (OPENBUTTON_X + BUTTON_W)) &&
-          (y > OPENBUTTON_Y) && (y <= (OPENBUTTON_Y + BUTTON_H))) {
-          Serial.println("Vent Status: OPEN");
-          ventStatus = "OPEN";  // Update status
-          drawVentStatus();  // Refresh text
-          openVent();
-      }
-
-      // Close Button Pressed
-      if ((x > CLOSEBUTTON_X) && (x < (CLOSEBUTTON_X + BUTTON_W)) &&
-          (y > CLOSEBUTTON_Y) && (y <= (CLOSEBUTTON_Y + BUTTON_H))) {
-          Serial.println("Vent Status: CLOSE");
-          ventStatus = "CLOSE";  // Update status
-          drawVentStatus();  // Refresh text
-          closeVent();
-      }
-      //snooze button
-    }
-    // Continuously display sensor data
-    }
-  }
-}
 
 
 
@@ -1916,46 +1768,19 @@ ledcWrite(BUZZER, 0);  //initially have the buzzer off.
     1                // run on core 1 (or 0)
   );
 
-  xTaskCreatePinnedToCore(
-    LCDTouchTask,      // function
-    "LCDTouchTask",    // name
-    4096,            // stack size
-    NULL,            // param
-    3,               // priority
-    &LCDTouchTaskHandle,
-    1                // run on core 1 (or 0)
-  );
-
-  xTaskCreatePinnedToCore(
-  SensorDataTask,      // function
-  "SensorDataTask",    // name
-  4096,            // stack size
-  NULL,            // param
-  2,               // priority
-  &SensorDataTaskHandle,
-  1                // run on core 1 (or 0)
-  );
-
-  xTaskCreatePinnedToCore(
-    HandleBluetoothTask,
-    "HandleBluetoothTask",
-    4096,
-    NULL,
-    2,
-    &HandleBluetoothTaskHandle,
-    1
-  )
 }
 
-static unsigned long lastDebounceTime = 0;  // For debouncing
-unsigned long debounceDelay = 30;  // 50ms debounce time
 void loop() {
   //lowBatteryCharm();
   //print_pinout();
+  uint16_t x, y;
+  static unsigned long lastDebounceTime = 0;  // For debouncing
+  unsigned long debounceDelay = 30;  // 50ms debounce time
+  displaySensorData();
   //temp();
   lame();
   delay(100); // Reduce the delay for better responsiveness
-  // handleBluetooth();
+  handleBluetooth();
 
   
     // Display "Connected" or "Not connected" below the OPEN button
@@ -2067,6 +1892,119 @@ Serial.println(buzzerFrequency); // Print the buzzer frequency
 
   // Handle snooze and buzzer logic
   //handleSnooze();  // Continuously check and handle snooze functionality
+ 
+
+  // See if there's any touch data for us
+  if (tft.getTouch(&x, &y)) {
+    // Check for debounce
+    if ((millis() - lastDebounceTime) > debounceDelay) {
+      lastDebounceTime = millis();  // Record the time of the last valid press
+
+      // Draw a block spot to show where touch was calculated to be
+      #ifdef BLACK_SPOT
+        tft.fillCircle(x, y, 2, TFT_BLACK);
+      #endif
+
+        
+
+  //breakpoint 5
+
+
+      
+      if (SwitchOn) {
+        if ((x > REDBUTTON_X) && (x < (REDBUTTON_X + REDBUTTON_W))) {
+          if ((y > REDBUTTON_Y) && (y <= (REDBUTTON_Y + REDBUTTON_H))) {
+            Serial.println("Red btn hit");
+            redBtn();
+          }
+        }
+      } 
+      
+      else {  // Record is off (SwitchOn == false)
+        if ((x > GREENBUTTON_X) && (x < (GREENBUTTON_X + GREENBUTTON_W))) {
+          if ((y > GREENBUTTON_Y) && (y <= (GREENBUTTON_Y + GREENBUTTON_H))) {
+            Serial.println("Green btn hit");
+            greenBtn();
+          }
+        }
+      }
+
+      // Test button action (only in Manual mode)
+      if (SwitchOn && (x > TESTBUTTON_X) && (x < (TESTBUTTON_X + TESTBUTTON_W))) {
+        if ((y > TESTBUTTON_Y) && (y <= (TESTBUTTON_Y + TESTBUTTON_H))) {
+          Serial.println("Test Button hit");
+        }
+      }
+      Serial.println(SwitchOn);
+
+      if ((x > MINUSBUTTON_X) && (x < (MINUSBUTTON_X + BUTTON_WIDTH))) {
+        if ((y > MINUSBUTTON_Y) && (y <= (MINUSBUTTON_Y + BUTTON_HEIGHT))) {
+          if (currentValue > 55) {
+            currentValue--;
+            drawValue();
+          }
+        }
+      }
+
+      if ((x > PLUSBUTTON_X) && (x < (PLUSBUTTON_X + BUTTON_WIDTH))) {
+        if ((y > PLUSBUTTON_Y) && (y <= (PLUSBUTTON_Y + BUTTON_HEIGHT))) {
+          if (currentValue < 85) {
+            currentValue++;
+            drawValue();
+          }
+        }
+      }
+
+      if ((x > SETBUTTON_X) && (x < (SETBUTTON_X + SETBUTTON_W))) {
+              if ((y > SETBUTTON_Y) && (y <= (SETBUTTON_Y + SETBUTTON_H))) {
+                float currentTemperatureF = (float)currentValue;  // Use the currentValue as the temperature in Fahrenheit
+                
+                // Get the vent angle corresponding to the temperature
+                int ventAngle = getVentAngle(currentTemperatureF);
+
+                // Print the temperature and vent angle to the Serial Monitor
+                /*
+                Serial.print("Temperature: ");
+                Serial.print(currentTemperatureF);
+                Serial.print(" °F, Vent Angle: ");
+                Serial.println(ventAngle);
+                */
+          }
+        }
+
+            if ((x > SETBUTTON_X) && (x < (SETBUTTON_X + SETBUTTON_W))) {
+                if ((y > SETBUTTON_Y) && (y <= (SETBUTTON_Y + SETBUTTON_H))) {
+                    if (SwitchOn) {  // Only allow in Autonomous Mode
+                        Serial.print("Sending temperature setting: ");
+                        Serial.println(currentValue);
+                        sendTemperatureValue();  // Send value over BLE
+                    }
+                }
+            }
+
+      if ((x > OPENBUTTON_X) && (x < (OPENBUTTON_X + BUTTON_W)) &&
+          (y > OPENBUTTON_Y) && (y <= (OPENBUTTON_Y + BUTTON_H))) {
+          Serial.println("Vent Status: OPEN");
+          ventStatus = "OPEN";  // Update status
+          drawVentStatus();  // Refresh text
+          openVent();
+      }
+
+// Close Button Pressed
+      if ((x > CLOSEBUTTON_X) && (x < (CLOSEBUTTON_X + BUTTON_W)) &&
+          (y > CLOSEBUTTON_Y) && (y <= (CLOSEBUTTON_Y + BUTTON_H))) {
+          Serial.println("Vent Status: CLOSE");
+          ventStatus = "CLOSE";  // Update status
+          drawVentStatus();  // Refresh text
+          closeVent();
+      }
+//snooze button
+
+    }
+  
+  // Continuously display sensor data
+
+  }
 /*
     if (!isConnected) {
         Serial.println("Scanning for Vent...");
