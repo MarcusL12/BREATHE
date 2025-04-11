@@ -58,6 +58,9 @@
  <Watch4>
   <Watches active="0" update="Never"/>
  </Watch4>
- <Files/>
- <EMStudioWindow activeProject="BREATHE_Vent_Unit" fileDialogDefaultFilter="*.c" autoConnectTarget="J-Link" buildConfiguration="Debug" sessionSettings="" debugSearchFileMap="" fileDialogInitialDirectory="" debugSearchPath="" autoConnectCapabilities="3199"/>
+ <Files>
+  <SessionOpenFile windowGroup="DockEditLeft" x="2" y="202" useTextEdit="1" path="../../../main.c" left="0" top="192" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="49" y="71" useTextEdit="1" path="../../../ble_cus.c" left="0" selected="1" top="58" codecName="Default"/>
+ </Files>
+ <EMStudioWindow activeProject="BREATHE_Vent_Unit" fileDialogDefaultFilter="*.c" autoConnectTarget="J-Link" buildConfiguration="Debug" sessionSettings="" debugSearchFileMap="" fileDialogInitialDirectory="" debugSearchPath="" autoConnectCapabilities="3711"/>
 </session>

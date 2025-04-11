@@ -22,6 +22,11 @@ static void on_connect(ble_cus_t * p_cus, ble_evt_t const * p_ble_evt)
     evt.evt_type = BLE_CUS_EVT_CONNECTED;
 
     p_cus->evt_handler(p_cus, &evt);
+
+    uint32_t err_code = sd_ble_gap_tx_power_set(BLE_GAP_TX_POWER_ROLE_CONN,
+        p_cus->conn_handle,
+        4);
+    APP_ERROR_CHECK(err_code);
 }
 
 /**@brief Function for handling the Disconnect event.
@@ -64,16 +69,16 @@ static void on_write(ble_cus_t * p_cus, ble_evt_t const * p_ble_evt)
         memcpy(message_bus, p_evt_write->data, length);
         message_bus[length] = '\0';
 
-        if(strcmp(message_bus, "CLOSE") == 0)
+        if (strcmp(message_bus, "CLOSE") == 0)   
         {   
             // nrf_gpio_pin_clear(25); 
-            move_vent(2);
+            move_vent(8); // 55 - 50
             sprintf(message_bus, "GOT:CLOSE");
         }
-        else if(strcmp(message_bus, "OPEN") == 0)
+        else if (strcmp(message_bus, "OPEN") == 0)
         {
             // nrf_gpio_pin_set(25); 
-            move_vent(70); 
+            move_vent(78);  // 120 - 160
             sprintf(message_bus, "GOT:OPEN");
         }
         else
