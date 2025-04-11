@@ -340,7 +340,7 @@
  
      /* 1-channel PWM, 200Hz. */
      if (!motor_connected) {
-         app_pwm_config_t pwm1_cfg = APP_PWM_DEFAULT_CONFIG_1CH(20000L, NRF_GPIO_PIN_MAP(0,6));
+         app_pwm_config_t pwm1_cfg = APP_PWM_DEFAULT_CONFIG_1CH(20000L, NRF_GPIO_PIN_MAP(0,13));
          // configure PWM to active high
          pwm1_cfg.pin_polarity[0] = APP_PWM_POLARITY_ACTIVE_HIGH;
          err_code = app_pwm_init(&PWM1,&pwm1_cfg,pwm_ready_callback);
