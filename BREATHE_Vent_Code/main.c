@@ -144,7 +144,7 @@
  // Number of samples to take in one burst
  #define NUM_SAMPLES 1
  // Timer interval (in ticks), e.g., 300000 ms for 5 minutes
- #define SAADC_SAMPLE_INTERVAL APP_TIMER_TICKS(2000 / NUM_SAMPLES) 
+ #define SAADC_SAMPLE_INTERVAL APP_TIMER_TICKS(10000 / NUM_SAMPLES) 
  
  APP_TIMER_DEF(m_saadc_timer_id);
  
@@ -896,6 +896,7 @@
      {
          case BLE_GAP_EVT_DISCONNECTED:
              NRF_LOG_INFO("Disconnected.");
+             BLE_connected = false;
              // LED indication will be changed when advertising starts.
              break;
  
@@ -906,6 +907,7 @@
              m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
              err_code = nrf_ble_qwr_conn_handle_assign(&m_qwr, m_conn_handle);
              APP_ERROR_CHECK(err_code);
+             BLE_connected = true;
              break;
  
          case BLE_GAP_EVT_PHY_UPDATE_REQUEST:
