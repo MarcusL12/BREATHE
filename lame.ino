@@ -498,13 +498,17 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
     }
 };
 
-void startBLEScan() {
+void initializeBLEScan() {
     BLEScan* pBLEScan = BLEDevice::getScan();
     pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
     pBLEScan->setInterval(1349);
     pBLEScan->setWindow(449);
     pBLEScan->setActiveScan(true);
-    pBLEScan->start(0, false);
+}
+
+void startBLEScan() {
+    BLEScan* pBLEScan = BLEDevice::getScan();
+    pBLEScan->start(10, false);
 }
 
 void sendVentCommand(String command) {
@@ -690,9 +694,53 @@ void lowBatteryCharm() {
 //-------------------------------------------------------------------//
 
 
+void update_connect_status (String message) {
+    // 1) Clear that region on the TFT
+    tft.fillRect(177, 0, 177, 40, TFT_BLACK);
+
+    // 2) Set text properties (same as in the sprite)
+    tft.setTextDatum(MC_DATUM);
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    tft.setTextSize(2);
+
+    // 3) Draw your string at the coordinates 
+    //    that replicate sprite offset (80,24)
+    tft.drawString(message.c_str(), 177 + 80, 0 + 24); 
+}
+
+uint16_t BLE_counter = 0;
+#define max_BLE_counter 40
 void handleBluetooth() {
     static bool wasConnected = false; // Tracks previous connection status
+    Serial.print("BLE_counter = "); Serial.println(BLE_counter);
 
+    if (!isConnected && BLE_counter == max_BLE_counter) {
+      // print "connecting..."
+      if (connection_status != 1) {
+        update_connect_status ("Connecting...");
+        connection_status = 1;
+      }
+      startBLEScan();
+      BLE_counter = 0;
+    }
+    else if (BLE_counter != max_BLE_counter) {
+      BLE_counter++;
+    }
+    // if it is not connected, then just print ("not connected")
+    if (!isConnected) {
+      // print not connected
+      if (connection_status != 0) {
+        update_connect_status("Not connected");
+        connection_status = 0;
+      }
+    }
+    else if (isConnected) {
+      // print "connected"
+      if (connection_status != 2) {
+        update_connect_status("Connected");
+        connection_status = 2;
+      }
+    }
     if (doConnect) {
         if (connectToServer()) {
             Serial.println("Connected to Vent successfully.");
@@ -711,7 +759,6 @@ void handleBluetooth() {
         }
     } else if (doScan) {
         Serial.println("Restarting BLE scan...");
-        BLEDevice::getScan()->start(0);
         wasConnected = false; // Update status so it prints again when reconnected
     }
 
@@ -1424,7 +1471,7 @@ if (avgCO2 > 1800) {
         //isOpen = true;
         openVent();
         ventStatus = "OPEN";
-        
+        renderRedScreen();
         
         //drawStatusBox(10, 275, "High CO2 LEVEL!", TFT_RED); //moving the position of this fown fopt now
         //breakpoint b4 this everything works
@@ -1434,43 +1481,7 @@ if (avgCO2 > 1800) {
 
         
         //for top bar
-tft.fillScreen(0x0841);
-        tft.fillRect(0,40, 155,300, 0x1082);
-        tft.fillRect(0,275,700,200, 0x18c3);
 
-        sprite.createSprite(320, 40);   // Size to match the "BREATHE Dashboard" section
-        sprite.setColorDepth(8);
-        sprite.loadFont(inter);         // Load custom font (inter)
-        sprite.setTextDatum(4);         // Set text alignment to center
-
-        // Draw BREATHE Dashboard Title
-        sprite.fillSprite(TFT_BLACK);   
-        sprite.setTextColor(TFT_WHITE);
-        sprite.setTextSize(1);  
-        sprite.drawString("B.R.E.A.T.H.E", 78, 24);  
-        sprite.pushSprite(0, 0);  
-
- 
-
-        sprite.fillSprite(TFT_BLACK);
-        sprite.pushSprite(280,0);
-
-        sprite.fillSprite(TFT_BLACK);
-        sprite.setTextColor(TFT_WHITE);
-        sprite.drawString(" SET", 105, 24);
-        sprite.pushSprite(320, 0);
-
-        tft.fillRect(156, 40, 900, 234,TFT_RED);
-
-        greenBtn();
-        drawPlusMinusButtons();
-        drawValueRed();
-        drawSetButton();  // Update Set button appearance
-
-        drawVentStatus();
-        
-        displayCO2red(co2);
-        displayTemperatureRed(temperatureF);
         
 
         
@@ -1481,11 +1492,11 @@ tft.fillScreen(0x0841);
         else if (batteryDead){
           batteryStatusBox(8, 275, "    Battery Dead!", TFT_ORANGE);
         }
-
+/*
         else {
           drawStatusBox(10, 275, "High CO2 LEVEL!", 0x18c3);
         }
-
+*/
         if(!isOpen){
           closeVent();
           ventStatus = "OPEN";
@@ -1494,42 +1505,12 @@ tft.fillScreen(0x0841);
     }
 } else {
     if (actionTriggered) {
+      connection_status = 100;
+      renderScreen();
         actionTriggered = false;
-        drawStatusBox(10, 275, "Normal CO2 Levels :)", 0x18c3);
-        
-        tft.fillScreen(0x0841);
-        tft.fillRect(0,40, 155,300, 0x1082);
-        tft.fillRect(0,275,700,200, 0x18c3);
-
-        sprite.setColorDepth(8);
-        sprite.createSprite(320, 40);   // Size to match the "BREATHE Dashboard" section
-        sprite.loadFont(inter);         // Load custom font (inter)
-        sprite.setTextDatum(4);         // Set text alignment to center
-
-        // Draw BREATHE Dashboard Title
-        sprite.fillSprite(TFT_BLACK);   
-        sprite.setTextColor(TFT_WHITE);
-        sprite.setTextSize(1);  
-        sprite.drawString("B.R.E.A.T.H.E", 78, 24);  
-        sprite.pushSprite(0, 0);  
-
- 
-
-        sprite.fillSprite(TFT_BLACK);
-        sprite.pushSprite(280,0);
-
-        sprite.fillSprite(TFT_BLACK);
-        sprite.setTextColor(TFT_WHITE);
-        sprite.drawString(" SET", 105, 24);
-        sprite.pushSprite(320, 0);
-
-        greenBtn();
-        drawPlusMinusButtons();
-        drawValue();
-        drawSetButton();  // Update Set button appearance
-
-        drawVentStatus();
-        displayCO2(co2);
+        //renderScreen();
+        //drawVentStatus();
+        //displayCO2(co2);
     }
 }
 
@@ -1674,7 +1655,164 @@ void lowBatteryNotification() {
 
 }
 
+void renderScreen() {
+    tft.fillScreen(0x0841);  // Clear the screen
+
+    sprite.deleteSprite();   // Delete any previous sprite
+    sprite.createSprite(320, 40);   // Size to match the "BREATHE Dashboard" section
+    sprite.loadFont(inter);         // Load custom font (inter)
+    sprite.setTextDatum(4);         // Set text alignment to center
+
+    // Draw BREATHE Dashboard Title
+    drawBreathe();
+
+    //Draw Set Dashboard Title
+    drawSet();
+
+    // Draw the main content area (normal mode)
+    tft.fillRect(0, 40, 155, 300, 0x1082);  // Left side
+    tft.fillRect(0, 275, 700, 200, 0x18c3); // Bottom area
+
+    // Draw buttons and values
+    greenBtn();
+    drawPlusMinusButtons();
+    drawValue();
+    drawVentStatus();
+    displayCO2(co2);
+    displayTemperature(temperatureF);
+
+    // **Re-render the battery status box here after the normal screen is restored**
+    if (batteryLow) {
+        batteryStatusBox(8, 275, "Low Battery!", TFT_ORANGE);  // Low Battery box
+    } else if (batteryDead) {
+        batteryStatusBox(8, 275, "Battery Dead!", TFT_ORANGE);  // Battery Dead box
+    } else {
+        emptyBatteryMsg();  // Clear battery box
+        batteryStatusBox(270, 275, " ",0x18c3);
+    }
+}
+
+
+
 void setup(void){ 
+
+  tempSprite.createSprite(160, 100);  // Allocate once and reuse
+  co2Sprite.createSprite(160, 40);
+
+  tft.init();                 //initiliaze tft screen
+  tft.setRotation(1);         //set oritentation of screen contetns
+  tft.fillScreen(0x0841);  //set screen background to black
+  
+  print_pinout();
+  analogWrite(TFT_BL, 255);   //send a pwm signal to backlight pin
+  //digitalWrite(TFT_BL, HIGH);
+  Serial.begin(115200);       //set baud rate 
+  Serial.println("Starting Vent Control System...");
+
+  BLEDevice::init("ESP32_GUI_Client");
+  initializeBLEScan();
+  renderScreen();
+
+  //tft.init();                 //initiliaze tft screen
+  //tft.setRotation(1);         //set oritentation of screen contetns
+  //tft.fillScreen(0x0841);  //set screen background to black
+  
+
+  //breakpoint 2
+  pinMode(BUZZER, OUTPUT);
+  // Setup timer with given frequency, resolution and attach it to a led pin with auto-selected channel
+
+// Set up PWM for the backlight
+  ledcAttach(TFT_BL, 10000, LEDC_TIMER_12_BIT);  // 10kHz frequency for backlight
+  ledcWrite(TFT_BL, 4095); 
+
+  // Set up PWM for the buzzer
+  ledcAttach(BUZZER, LEDC_BASE_FREQ, LEDC_TIMER_12_BIT);  // Set buzzer frequency
+  ledcWrite(BUZZER, 0);  //initially have the buzzer off. 
+  
+  // Initialize SCD4x sensor
+  Wire.begin();
+  scd4x.begin(Wire);
+  scanI2C();
+  DHT.begin();
+
+      uint16_t error = scd4x.startPeriodicMeasurement();
+    if (error) {
+        Serial.println("Failed to start SCD41 measurements.");
+    } else {
+        Serial.println("SCD41 measurement started.");
+    }
+/*
+  sprite.createSprite(320, 40);   // Size to match the "BREATHE Dashboard" section
+  sprite.loadFont(inter);         // Load custom font (inter)
+  sprite.setTextDatum(4);         // Set text alignment to center
+
+  // Draw BREATHE Dashboard Title
+  sprite.fillSprite(TFT_BLACK);   
+  sprite.setTextColor(TFT_WHITE);
+  sprite.setTextSize(1);  
+  sprite.drawString("B.R.E.A.T.H.E", 78, 24);  
+  sprite.pushSprite(0, 0);  
+
+  // Draw G40 On Dashboard TItle
+  sprite.fillSprite(TFT_BLACK);
+  sprite.setTextColor(TFT_WHITE);
+  sprite.drawString(" SET", 105, 24);
+  sprite.pushSprite(320, 0); 
+
+  tft.fillRect(0,40, 155,300, 0x1082);
+  tft.fillRect(0,275,700,200, 0x18c3); //0x18c3
+  //drawOpenCloseButtons();
+  //drawStatusBox(" ", 0x18c3);
+  //tft.fillRect(10,275, 300, 300, TFT_GREEN);
+
+
+    
+
+
+
+
+  //draw initial status boxes before data is sent to them
+  //drawStatusBox(100, 60, "Temp: -- °C", 0x31a6);
+  //drawStatusBox(10, 130, "CO2: -- ppm", 0x31a6);  // CO2 on the left side
+
+  //by default, initiliaze with autonomous mode
+  greenBtn();  
+  //drawGreenSquare();
+  // pinMode(BUZZER, OUTPUT);
+  drawValue();
+  drawVentStatus();
+  //lowBatteryNotification();
+  */
+
+/*
+        sprite.fillSprite(TFT_BLACK); // Clear previous value
+        sprite.setTextColor(TFT_WHITE);
+        sprite.drawString("test", 10, 30); // Display the current number
+        sprite.pushSprite(80, 80);  // Push the updated sprite to the screen
+        */
+  //sprite.drawString("Test", 120, 50);
+  //sprite.pushSprite(0, 0);
+
+  //tft.fillRect(156, 40, 900, 234,TFT_GREEN);
+  esp_err_t errRc=esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT,ESP_PWR_LVL_P9);
+  esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_P9);
+  esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_SCAN ,ESP_PWR_LVL_P9);
+
+  // --- FreeRTOS: Create BuzzerTask pinned to core 1 (or 0)
+  xTaskCreatePinnedToCore(
+    BuzzerTask,      // function
+    "BuzzerTask",    // name
+    4096,            // stack size
+    NULL,            // param
+    1,               // priority
+    &BuzzerTaskHandle,
+    1                // run on core 1 (or 0)
+  );
+
+}
+
+void loop(){
   
   print_pinout();
   analogWrite(TFT_BL, 255);   //send a pwm signal to backlight pin
@@ -1683,7 +1821,7 @@ void setup(void){
   Serial.println("Starting Vent Control System...");
 
     BLEDevice::init("ESP32_GUI_Client");
-    startBLEScan();
+  initializeBLEScan();
 
   tft.init();                 //initiliaze tft screen
   tft.setRotation(1);         //set oritentation of screen contetns
@@ -1794,6 +1932,8 @@ void loop() {
   lame();
   delay(100); // Reduce the delay for better responsiveness
   handleBluetooth();
+  Serial.print("Free Heap: ");
+  Serial.println(ESP.getFreeHeap());
 
   
     // Display "Connected" or "Not connected" below the OPEN button
