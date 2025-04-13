@@ -148,7 +148,7 @@ int valueY = PLUSBUTTON_Y + BUTTON_HEIGHT + 50;  // Keep the same Y position
 //song
 int song_pt;
 
-
+uint8_t connection_status = 100;
 
 String ventStatus = "OPEN";  // Default status is OPEN
 
@@ -271,9 +271,9 @@ void lame(){
 
     // Convert BatteryLife to float
     float voltage = BatteryLife.toFloat();
-
+    
     // Only process valid numbers (not NAN)
-    if (!isnan(voltage)) {
+    if (!isnan(voltage) && connection_status != 0) {
         // Print the new voltage reading
         Serial.print("New voltage reading: ");
         Serial.print(voltage);
@@ -702,7 +702,7 @@ void lowBatteryCharm() {
 
 //-------------------------------------------------------------------//
 
-uint8_t connection_status = 100;
+
 void update_connect_status (String message) {
     // 1) Clear that region on the TFT
     tft.fillRect(177, 0, 177, 40, TFT_BLACK);
@@ -738,8 +738,14 @@ void handleBluetooth() {
     // if it is not connected, then just print ("not connected")
     if (!isConnected) {
       // print not connected
-      if (connection_status != 0) {
+      if (connection_status != 0 ) {
         update_connect_status("Not connected");
+        for (int i = 0; i < READING_COUNT; i++){
+          voltageReadings[i] = 1.5;
+        }
+        batteryStatusBox(270, 275, " ", 0x18c3);
+        emptyBatteryMsg();  // Clear battery box
+        ledcWrite(BUZZER, 0);
         connection_status = 0;
       }
     }
