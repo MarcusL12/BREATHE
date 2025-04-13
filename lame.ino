@@ -122,6 +122,9 @@ int PLUSBUTTON_X = PLUSBUTTON_X_ORIG;
 
 TFT_eSPI tft = TFT_eSPI();       // Invoke custom library
 TFT_eSprite sprite = TFT_eSprite(&tft);  // Create sprite object for text
+//TFT_eSprite sprite = TFT_eSprite(&tft);  // Create sprite object for text
+TFT_eSprite tempSprite = TFT_eSprite(&tft);  // Separate from the shared "sprite"
+TFT_eSprite co2Sprite = TFT_eSprite(&tft);
 SensirionI2CScd4x scd4x;         // Create SCD4x sensor object
 DHT20 DHT;
 
@@ -550,6 +553,11 @@ void closeVent() {
     isOpen = false;
 }
 
+void emptyBatteryMsg(){
+  // params: x, y, w, h, color
+  tft.fillRect(0, 275, 480, 60, 0x18c3);
+}
+
 //breakpoint 1000
 
 void ledcAnalogWrite(uint8_t pin, uint32_t value, uint32_t valueMax = 255) {
@@ -693,7 +701,7 @@ void lowBatteryCharm() {
 
 //-------------------------------------------------------------------//
 
-
+uint8_t connection_status = 100;
 void update_connect_status (String message) {
     // 1) Clear that region on the TFT
     tft.fillRect(177, 0, 177, 40, TFT_BLACK);
@@ -1040,6 +1048,39 @@ void greenBtn()
 
 
 }
+void greenBtnClone()
+{
+  tft.fillRect(GREENBUTTON_X, GREENBUTTON_Y, GREENBUTTON_W, GREENBUTTON_H, 0x4208);
+  tft.fillRect(REDBUTTON_X, REDBUTTON_Y, REDBUTTON_W, REDBUTTON_H, 0x7baf);
+  drawFrame();
+  tft.setTextColor(0xdefb);
+  tft.setTextSize(2);
+  tft.setTextDatum(MC_DATUM);
+  tft.drawString("M", REDBUTTON_X + (REDBUTTON_W / 2) + 1, REDBUTTON_Y + (REDBUTTON_H / 2));
+  //SwitchOn = true;
+
+
+  // Draw the box with text above the button for autonomous mode
+  tft.fillRect(REDBUTTON_X, REDBUTTON_Y - 30, FRAME_W, 30, 0x6b4d);
+  tft.setTextColor(0xdefb);
+  tft.setTextSize(2);
+  tft.setTextDatum(MC_DATUM);
+  tft.drawString("Disabled!", REDBUTTON_X + (FRAME_W / 2), REDBUTTON_Y - 15);
+//drawsetbutton
+  // Move buttons out of bounds to hide them
+  //updateButtons(0);
+ // updateOC(0);
+  //drawValueA();
+  //updateGreenSquare(20);  // Move down by 20 pixels
+
+ drawPlusMinusButtons();
+ 
+ drawValue();
+     drawSetButton();  // Update Set button appearance
+
+
+}
+
 
 
 //middle label
@@ -1655,6 +1696,25 @@ void lowBatteryNotification() {
 
 }
 
+
+void drawBreathe(){
+  tft.fillRect(0, 0, 177, 40, TFT_BLACK);  //xywh
+  tft.setTextDatum(TL_DATUM);        
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.setTextSize(2);
+  tft.drawString("B.R.E.A.T.H.E", 0, 15);
+}
+
+
+void drawSet(){
+  tft.fillRect(390, 0, 177, 40, TFT_BLACK);  //xywh
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.setTextSize(2);
+  tft.setTextDatum(TL_DATUM);
+  tft.drawString(" SET", 396, 15);
+
+}
+
 void renderScreen() {
     tft.fillScreen(0x0841);  // Clear the screen
 
@@ -1692,7 +1752,46 @@ void renderScreen() {
     }
 }
 
+void renderRedScreen(){
 
+
+        tft.fillRect(0,40, 155,300, 0x1082);
+        tft.fillRect(0,275,700,200, 0x18c3);
+
+        sprite.createSprite(320, 40);   // Size to match the "BREATHE Dashboard" section
+        sprite.loadFont(inter);         // Load custom font (inter)
+        sprite.setTextDatum(4);         // Set text alignment to center
+
+        // Draw BREATHE Dashboard Title
+
+    // Draw BREATHE Dashboard Title
+    //drawBreathe();
+
+    //Draw Set Dashboard Title
+    //drawSet();;
+
+        tft.fillRect(156, 40, 900, 234,TFT_RED);
+
+        greenBtnClone();
+        drawPlusMinusButtons();
+        drawValueRed();
+        drawSetButton();  // Update Set button appearance
+
+        drawVentStatus();
+        
+        displayCO2red(co2);
+        displayTemperatureRed(temperatureF);
+
+        // **Re-render the battery status box here after the normal screen is restored**
+        if (batteryLow) {
+            batteryStatusBox(8, 275, "Low Battery!", TFT_ORANGE);  // Low Battery box
+        } else if (batteryDead) {
+            batteryStatusBox(8, 275, "Battery Dead!", TFT_ORANGE);  // Battery Dead box
+        } else {
+            emptyBatteryMsg();  // Clear battery box  // Clear battery box
+            batteryStatusBox(270, 275, " ",0x18c3);
+        }
+}
 
 void setup(void){ 
 
