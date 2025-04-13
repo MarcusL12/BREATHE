@@ -86,7 +86,7 @@
 #define SETBUTTON_W FRAME_W
 #define SETBUTTON_H 40
 
-uint16_t BLE_counter = 0;
+
 //test 
 unsigned long lastBatteryCharmTime = 0;
 const unsigned long batteryCharmInterval = 500;  // Adjust the interval as needed
@@ -121,14 +121,7 @@ int PLUSBUTTON_X = PLUSBUTTON_X_ORIG;
 #define SETBUTTON_H 40
 
 TFT_eSPI tft = TFT_eSPI();       // Invoke custom library
-TFT_eSPI tft_temperature = TFT_eSPI();       // Invoke custom library
-TFT_eSPI tft_co2 = TFT_eSPI();       // Invoke custom library
-
-
 TFT_eSprite sprite = TFT_eSprite(&tft);  // Create sprite object for text
-
-TFT_eSprite Temperature_sprite = TFT_eSprite(&tft_temperature);  // Create sprite object for Temperature
-TFT_eSprite CO2_sprite = TFT_eSprite(&tft_co2);  // Create sprite object for Co2
 SensirionI2CScd4x scd4x;         // Create SCD4x sensor object
 DHT20 DHT;
 
@@ -231,6 +224,7 @@ bool isOpen = false;
 void drawSnoozeButton() {
   // Draw the snooze button at the given position and size
   sprite.deleteSprite();  // Clear previous sprite before creating a new one
+  sprite.setColorDepth(8);
   sprite.createSprite(SNOOZEBUTTON_W, SNOOZEBUTTON_H);  // Create sprite matching the previous text area
   sprite.fillSprite(0x4208);  // Fill background with original rectangle color
 
@@ -504,17 +498,13 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
     }
 };
 
-void initializeBLEScan() {
+void startBLEScan() {
     BLEScan* pBLEScan = BLEDevice::getScan();
     pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
     pBLEScan->setInterval(1349);
     pBLEScan->setWindow(449);
     pBLEScan->setActiveScan(true);
-}
-
-void startBLEScan() {
-  BLEScan* pBLEScan = BLEDevice::getScan();
-  pBLEScan->start(10, false);
+    pBLEScan->start(0, false);
 }
 
 void sendVentCommand(String command) {
@@ -698,37 +688,11 @@ void lowBatteryCharm() {
 }
 
 //-------------------------------------------------------------------//
-void update_connect_status (String message) {
-  sprite.fillSprite(TFT_BLACK);   
-  sprite.setTextColor(TFT_WHITE);
-  sprite.setTextSize(2);  
-  sprite.drawString(message.c_str(), 74, 24);  //78, 24
-  sprite.pushSprite(225, 0);  
-}
 
-#define max_BLE_counter 40
+
 void handleBluetooth() {
     static bool wasConnected = false; // Tracks previous connection status
-    Serial.print("BLE_counter = "); Serial.println(BLE_counter);
 
-    if (!isConnected && BLE_counter == max_BLE_counter) {
-      // print "connecting..."
-      update_connect_status ("Connecting...");
-      startBLEScan();
-      BLE_counter = 0;
-    }
-    else if (BLE_counter != max_BLE_counter) {
-      BLE_counter++;
-    }
-    // if it is not connected, then just print ("not connected")
-    if (!isConnected) {
-      // print not connected
-      update_connect_status("Not connected");
-    }
-    else if (isConnected) {
-      // print "connected"
-      update_connect_status("Connected");
-    }
     if (doConnect) {
         if (connectToServer()) {
             Serial.println("Connected to Vent successfully.");
@@ -747,6 +711,7 @@ void handleBluetooth() {
         }
     } else if (doScan) {
         Serial.println("Restarting BLE scan...");
+        BLEDevice::getScan()->start(0);
         wasConnected = false; // Update status so it prints again when reconnected
     }
 
@@ -823,6 +788,7 @@ int CLOSEBUTTON_Y = CLOSEBUTTON_Y_ORIG;
 
 void drawSetButton() {
     sprite.deleteSprite();  // Clear previous sprite
+    sprite.setColorDepth(8);
     sprite.createSprite(SETBUTTON_W, SETBUTTON_H);  // Create sprite for button area
 
     if (SwitchOn) {  // Autonomous Mode
@@ -918,6 +884,7 @@ void updateGreenSquare(int deltaY) {
 
 void batteryStatusBox(int x, int y, String text, uint16_t color){
   sprite.deleteSprite();
+  sprite.setColorDepth(8);
 
   sprite.createSprite(300, 50);
   sprite.fillSprite(color);
@@ -933,6 +900,7 @@ void batteryStatusBox(int x, int y, String text, uint16_t color){
 // Function to draw a standard status box
 void drawStatusBox(int x, int y, String text, uint16_t color) {
     sprite.deleteSprite();  // Clear any previous sprite before creating a new one
+    sprite.setColorDepth(8);
 
     sprite.createSprite(300, 50);  // Create sprite with standard width and height
     sprite.fillSprite(color);  // Fill the sprite background with the given color
@@ -1042,6 +1010,7 @@ void drawManualModeLabel() {
 
 void drawValue() {
     sprite.deleteSprite();  // Clear any previous sprite before creating a new one
+    sprite.setColorDepth(8);
 
     sprite.createSprite(80, 40);  // Create a sprite for the value display
     sprite.fillSprite(0x0841);  // Fill with background color
@@ -1060,6 +1029,7 @@ void drawValue() {
 
 void drawValueRed() {
     sprite.deleteSprite();  // Clear any previous sprite before creating a new one
+    sprite.setColorDepth(8);
 
     sprite.createSprite(80, 40);  // Create a sprite for the value display
     sprite.fillSprite(TFT_RED);  // Fill with background color
@@ -1125,94 +1095,98 @@ int getVentAngle(float temperatureF) {
 }
 
 void displayTemperature(float temperatureF) {
-    Temperature_sprite.deleteSprite();  // Clear any previous sprite before creating a new one
+    sprite.deleteSprite();  // Clear any previous sprite before creating a new one
+    sprite.setColorDepth(8);
 
-    Temperature_sprite.createSprite(160, 100);  // Maintain the same sprite size
-    Temperature_sprite.fillSprite(0x0841);  // Fill the background with red
+    sprite.createSprite(160, 100);  // Maintain the same sprite size
+    sprite.fillSprite(0x0841);  // Fill the background with red
 
     // Load the large font
-    Temperature_sprite.loadFont(med);  
+    sprite.loadFont(med);  
 
     // Set text properties
-    Temperature_sprite.setTextColor(TFT_WHITE);  // White text for contrast
-    Temperature_sprite.setTextDatum(MC_DATUM);   // Center text in sprite
+    sprite.setTextColor(TFT_WHITE);  // White text for contrast
+    sprite.setTextDatum(MC_DATUM);   // Center text in sprite
 
     // Draw the temperature value inside the sprite
-    Temperature_sprite.drawString(String((int)temperatureF) + "°F", 75, 75);  // Centered in sprite
+    sprite.drawString(String((int)temperatureF) + "°F", 75, 75);  // Centered in sprite
 
     // Unload the font to free memory
-    Temperature_sprite.unloadFont();
+    sprite.unloadFont();
 
     // Push the sprite to the screen at the same position
-    Temperature_sprite.pushSprite(190, 50);
+    sprite.pushSprite(190, 50);
 }
 
 void displayTemperatureRed(float temperatureF) {
-    Temperature_sprite.deleteSprite();  // Clear any previous sprite before creating a new one
+    sprite.deleteSprite();  // Clear any previous sprite before creating a new one
+    sprite.setColorDepth(8);
 
-    Temperature_sprite.createSprite(160, 100);  // Maintain the same sprite size
-    Temperature_sprite.fillSprite(TFT_RED);  // Fill the background with red
+    sprite.createSprite(160, 100);  // Maintain the same sprite size
+    sprite.fillSprite(TFT_RED);  // Fill the background with red
 
     // Load the large font
-    Temperature_sprite.loadFont(med);  
+    sprite.loadFont(med);  
 
     // Set text properties
-    Temperature_sprite.setTextColor(TFT_WHITE);  // White text for contrast
-    Temperature_sprite.setTextDatum(MC_DATUM);   // Center text in sprite
+    sprite.setTextColor(TFT_WHITE);  // White text for contrast
+    sprite.setTextDatum(MC_DATUM);   // Center text in sprite
 
     // Draw the temperature value inside the sprite
-    Temperature_sprite.drawString(String((int)temperatureF) + "°F", 75, 75);  // Centered in sprite
+    sprite.drawString(String((int)temperatureF) + "°F", 75, 75);  // Centered in sprite
 
     // Unload the font to free memory
-    Temperature_sprite.unloadFont();
+    sprite.unloadFont();
 
     // Push the sprite to the screen at the same position
-    Temperature_sprite.pushSprite(190, 50);
+    sprite.pushSprite(190, 50);
 }
 
 
 void displayCO2(uint16_t co2) {
-    CO2_sprite.deleteSprite();  // Clear any previous sprite before creating a new one
-    CO2_sprite.createSprite(160, 40);  // Adjust sprite size to fit CO2 text properly
-    CO2_sprite.fillSprite(0x0841);  //0x0841, Set background (change if necessary)
+    sprite.deleteSprite();  // Clear any previous sprite before creating a new one
+    sprite.setColorDepth(8);
+    sprite.createSprite(160, 40);  // Adjust sprite size to fit CO2 text properly
+    sprite.fillSprite(0x0841);  //0x0841, Set background (change if necessary)
 
     // Load the large font
-    CO2_sprite.loadFont(inter);  
+    sprite.loadFont(inter);  
 
     // Set text properties
-    CO2_sprite.setTextColor(TFT_WHITE);
-    CO2_sprite.setTextDatum(MC_DATUM);
+    sprite.setTextColor(TFT_WHITE);
+    sprite.setTextDatum(MC_DATUM);
 
     // Draw the CO2 value inside the sprite
-    CO2_sprite.drawString(String(co2) + " ppm", 76, 25);  // Centered text
+    sprite.drawString(String(co2) + " ppm", 76, 25);  // Centered text
 
     // Unload the font to free memory
-    CO2_sprite.unloadFont();
+    sprite.unloadFont();
 
     // Push the sprite to the screen at the desired position
-    CO2_sprite.pushSprite(180, 170);  // Adjust position as needed
+    sprite.pushSprite(180, 170);  // Adjust position as needed
 }
 
 void displayCO2red(uint16_t co2) {
-    CO2_sprite.deleteSprite();  // Clear any previous sprite before creating a new one
-    CO2_sprite.createSprite(160, 40);  // Adjust sprite size to fit CO2 text properly
-    CO2_sprite.fillSprite(TFT_RED);  //0x0841, Set background (change if necessary)
+    sprite.deleteSprite();  // Clear any previous sprite before creating a new one
+    sprite.setColorDepth(8);
+    sprite.createSprite(160, 40);  // Adjust sprite size to fit CO2 text properly
+    sprite.fillSprite(TFT_RED);  //0x0841, Set background (change if necessary)
 
     // Load the large font
-    CO2_sprite.loadFont(inter);  
+    sprite.loadFont(inter);  
 
     // Set text properties
-    CO2_sprite.setTextColor(TFT_WHITE);
-    CO2_sprite.setTextDatum(MC_DATUM);
+    sprite.setTextColor(TFT_WHITE);
+    sprite.setTextDatum(MC_DATUM);
 
     // Draw the CO2 value inside the sprite
-    CO2_sprite.drawString(String(co2) + " ppm", 76, 25);  // Centered text
+    sprite.drawString(String(co2) + " ppm", 76, 25);  // Centered text
 
     // Unload the font to free memory
-    CO2_sprite.unloadFont();
+    sprite.unloadFont();
 
     // Push the sprite to the screen at the desired position
-    CO2_sprite.pushSprite(180, 170);  // Adjust position as needed
+    sprite.pushSprite(180, 170);  // Adjust position as needed
 }
 
 /*
@@ -1465,6 +1439,7 @@ tft.fillScreen(0x0841);
         tft.fillRect(0,275,700,200, 0x18c3);
 
         sprite.createSprite(320, 40);   // Size to match the "BREATHE Dashboard" section
+        sprite.setColorDepth(8);
         sprite.loadFont(inter);         // Load custom font (inter)
         sprite.setTextDatum(4);         // Set text alignment to center
 
@@ -1526,6 +1501,7 @@ tft.fillScreen(0x0841);
         tft.fillRect(0,40, 155,300, 0x1082);
         tft.fillRect(0,275,700,200, 0x18c3);
 
+        sprite.setColorDepth(8);
         sprite.createSprite(320, 40);   // Size to match the "BREATHE Dashboard" section
         sprite.loadFont(inter);         // Load custom font (inter)
         sprite.setTextDatum(4);         // Set text alignment to center
@@ -1677,6 +1653,7 @@ void scanI2C() {
 void lowBatteryNotification() {
 
     sprite.deleteSprite();  // Clear any previous sprite before creating a new one
+    sprite.setColorDepth(8);
     sprite.createSprite(200, 120);  // Adjust sprite size to fit CO2 text properly
     sprite.fillSprite(TFT_WHITE);  //0x0841, Set background (change if necessary)
 
@@ -1706,8 +1683,8 @@ void setup(void){
   Serial.println("Starting Vent Control System...");
 
     BLEDevice::init("ESP32_GUI_Client");
-    // startBLEScan();
-  initializeBLEScan();
+    startBLEScan();
+
   tft.init();                 //initiliaze tft screen
   tft.setRotation(1);         //set oritentation of screen contetns
   tft.fillScreen(0x0841);  //set screen background to black
@@ -1737,7 +1714,7 @@ ledcWrite(BUZZER, 0);  //initially have the buzzer off.
     } else {
         Serial.println("SCD41 measurement started.");
     }
-
+  sprite.setColorDepth(8);
   sprite.createSprite(320, 40);   // Size to match the "BREATHE Dashboard" section
   sprite.loadFont(inter);         // Load custom font (inter)
   sprite.setTextDatum(4);         // Set text alignment to center
@@ -1805,7 +1782,6 @@ ledcWrite(BUZZER, 0);  //initially have the buzzer off.
   );
 
 }
-
 
 void loop() {
   //lowBatteryCharm();
@@ -1933,7 +1909,6 @@ Serial.println(buzzerFrequency); // Print the buzzer frequency
 
   // See if there's any touch data for us
   if (tft.getTouch(&x, &y)) {
-    Serial.print("getTouch location = "); Serial.print(x); Serial.print(", "); Serial.println(y);
     // Check for debounce
     if ((millis() - lastDebounceTime) > debounceDelay) {
       lastDebounceTime = millis();  // Record the time of the last valid press
