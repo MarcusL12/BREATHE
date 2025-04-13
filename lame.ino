@@ -86,7 +86,7 @@
 #define SETBUTTON_W FRAME_W
 #define SETBUTTON_H 40
 
-
+uint16_t BLE_counter = 0;
 //test 
 unsigned long lastBatteryCharmTime = 0;
 const unsigned long batteryCharmInterval = 500;  // Adjust the interval as needed
@@ -121,9 +121,14 @@ int PLUSBUTTON_X = PLUSBUTTON_X_ORIG;
 #define SETBUTTON_H 40
 
 TFT_eSPI tft = TFT_eSPI();       // Invoke custom library
+TFT_eSPI tft_temperature = TFT_eSPI();       // Invoke custom library
+TFT_eSPI tft_co2 = TFT_eSPI();       // Invoke custom library
+
+
 TFT_eSprite sprite = TFT_eSprite(&tft);  // Create sprite object for text
-TFT_eSprite Temperature_sprite = TFT_eSprite(&tft);  // Create sprite object for Temperature
-TFT_eSprite CO2_sprite = TFT_eSprite(&tft);  // Create sprite object for Co2
+
+TFT_eSprite Temperature_sprite = TFT_eSprite(&tft_temperature);  // Create sprite object for Temperature
+TFT_eSprite CO2_sprite = TFT_eSprite(&tft_co2);  // Create sprite object for Co2
 SensirionI2CScd4x scd4x;         // Create SCD4x sensor object
 DHT20 DHT;
 
@@ -499,13 +504,17 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
     }
 };
 
-void startBLEScan() {
+void initializeBLEScan() {
     BLEScan* pBLEScan = BLEDevice::getScan();
     pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
     pBLEScan->setInterval(1349);
     pBLEScan->setWindow(449);
     pBLEScan->setActiveScan(true);
-    pBLEScan->start(0, false);
+}
+
+void startBLEScan() {
+  BLEScan* pBLEScan = BLEDevice::getScan();
+  pBLEScan->start(10, false);
 }
 
 void sendVentCommand(String command) {
@@ -689,11 +698,37 @@ void lowBatteryCharm() {
 }
 
 //-------------------------------------------------------------------//
+void update_connect_status (String message) {
+  sprite.fillSprite(TFT_BLACK);   
+  sprite.setTextColor(TFT_WHITE);
+  sprite.setTextSize(2);  
+  sprite.drawString(message.c_str(), 74, 24);  //78, 24
+  sprite.pushSprite(225, 0);  
+}
 
-
+#define max_BLE_counter 40
 void handleBluetooth() {
     static bool wasConnected = false; // Tracks previous connection status
+    Serial.print("BLE_counter = "); Serial.println(BLE_counter);
 
+    if (!isConnected && BLE_counter == max_BLE_counter) {
+      // print "connecting..."
+      update_connect_status ("Connecting...");
+      startBLEScan();
+      BLE_counter = 0;
+    }
+    else if (BLE_counter != max_BLE_counter) {
+      BLE_counter++;
+    }
+    // if it is not connected, then just print ("not connected")
+    if (!isConnected) {
+      // print not connected
+      update_connect_status("Not connected");
+    }
+    else if (isConnected) {
+      // print "connected"
+      update_connect_status("Connected");
+    }
     if (doConnect) {
         if (connectToServer()) {
             Serial.println("Connected to Vent successfully.");
@@ -712,7 +747,6 @@ void handleBluetooth() {
         }
     } else if (doScan) {
         Serial.println("Restarting BLE scan...");
-        BLEDevice::getScan()->start(0);
         wasConnected = false; // Update status so it prints again when reconnected
     }
 
@@ -1672,8 +1706,8 @@ void setup(void){
   Serial.println("Starting Vent Control System...");
 
     BLEDevice::init("ESP32_GUI_Client");
-    startBLEScan();
-
+    // startBLEScan();
+  initializeBLEScan();
   tft.init();                 //initiliaze tft screen
   tft.setRotation(1);         //set oritentation of screen contetns
   tft.fillScreen(0x0841);  //set screen background to black
@@ -1771,6 +1805,7 @@ ledcWrite(BUZZER, 0);  //initially have the buzzer off.
   );
 
 }
+
 
 void loop() {
   //lowBatteryCharm();
@@ -1898,6 +1933,7 @@ Serial.println(buzzerFrequency); // Print the buzzer frequency
 
   // See if there's any touch data for us
   if (tft.getTouch(&x, &y)) {
+    Serial.print("getTouch location = "); Serial.print(x); Serial.print(", "); Serial.println(y);
     // Check for debounce
     if ((millis() - lastDebounceTime) > debounceDelay) {
       lastDebounceTime = millis();  // Record the time of the last valid press
