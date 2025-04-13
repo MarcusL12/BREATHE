@@ -123,8 +123,8 @@ int PLUSBUTTON_X = PLUSBUTTON_X_ORIG;
 TFT_eSPI tft = TFT_eSPI();       // Invoke custom library
 TFT_eSprite sprite = TFT_eSprite(&tft);  // Create sprite object for text
 //TFT_eSprite sprite = TFT_eSprite(&tft);  // Create sprite object for text
-TFT_eSprite tempSprite = TFT_eSprite(&tft);  // Separate from the shared "sprite"
-TFT_eSprite co2Sprite = TFT_eSprite(&tft);
+//TFT_eSprite tempSprite = TFT_eSprite(&tft);  // Separate from the shared "sprite"
+//TFT_eSprite co2Sprite = TFT_eSprite(&tft);
 SensirionI2CScd4x scd4x;         // Create SCD4x sensor object
 DHT20 DHT;
 
@@ -332,7 +332,7 @@ void lame(){
                         lowBatteryDetectionTime = millis();  // Record detection time
                         Serial.println("Potential low battery, timer will now verify");
                         Serial.println("voltage is less than 1.4 but greater than 1.2");
-                        batteryStatusBox(270, 275, "Ptnl. Low Batery", TFT_ORANGE);
+                        batteryStatusBox(270, 275, "Ptnl. Low Battery", TFT_ORANGE);
                     } 
                     else if (batteryLowPending && (millis() - lowBatteryDetectionTime >= VERIFICATION_DELAY_MS)) {
                         // Low battery confirmed after verification period
@@ -358,8 +358,8 @@ void lame(){
                 
                 else if (averageVoltage > LOW_BATTERY_THRESHOLD){
                     Serial.println("Above 1.4");
-                    drawStatusBox(270, 275, " ", 0x18c3);
-                    batteryStatusBox(8, 275, "", 0x18c3);
+                    //drawStatusBox(270, 275, " ", 0x18c3);
+                    emptyBatteryMsg();  // Clear battery box
                     batteryLow = false;
                     batteryDead = false;
                     ledcWrite(BUZZER, 0);
@@ -368,7 +368,7 @@ void lame(){
                         // Recovered during verification period
                         batteryLowPending = false;
                         Serial.println("False alarm, battery recovered during verification");
-                        batteryStatusBox(8, 275, "", 0x18c3);
+                        emptyBatteryMsg();  // Clear battery box
                         ledcWrite(BUZZER, 0);
 
                     }
@@ -377,8 +377,8 @@ void lame(){
                         batteryLow = false;
                         Serial.println("Battery back to normal");
                         Serial.println("Buzzer Off");
-                        drawStatusBox(270, 275, " ", 0x18c3);
-                        batteryStatusBox(8, 275, "", 0x18c3);
+                        batteryStatusBox(270, 275, " ", 0x18c3);
+                        emptyBatteryMsg();  // Clear battery box
                         ledcWrite(BUZZER, 0);
 
                     }
@@ -389,6 +389,7 @@ void lame(){
                   batteryDead = true;
                   Serial.println("Dead, Below 1.2");
                   batteryStatusBox(8, 275, "   Vent Out of Battery!", TFT_ORANGE);
+                  batteryStatusBox(270, 275, " ", TFT_ORANGE);
 
                   
                 }
@@ -1795,8 +1796,8 @@ void renderRedScreen(){
 
 void setup(void){ 
 
-  tempSprite.createSprite(160, 100);  // Allocate once and reuse
-  co2Sprite.createSprite(160, 40);
+ // tempSprite.createSprite(160, 100);  // Allocate once and reuse
+ // co2Sprite.createSprite(160, 40);
 
   tft.init();                 //initiliaze tft screen
   tft.setRotation(1);         //set oritentation of screen contetns
@@ -1911,114 +1912,6 @@ void setup(void){
 
 }
 
-void loop(){
-  
-  print_pinout();
-  analogWrite(TFT_BL, 255);   //send a pwm signal to backlight pin
-  //digitalWrite(TFT_BL, HIGH);
-  Serial.begin(115200);       //set baud rate 
-  Serial.println("Starting Vent Control System...");
-
-    BLEDevice::init("ESP32_GUI_Client");
-  initializeBLEScan();
-
-  tft.init();                 //initiliaze tft screen
-  tft.setRotation(1);         //set oritentation of screen contetns
-  tft.fillScreen(0x0841);  //set screen background to black
-  
-
-  //breakpoint 2
-    pinMode(BUZZER, OUTPUT);
-  // Setup timer with given frequency, resolution and attach it to a led pin with auto-selected channel
-
-// Set up PWM for the backlight
-ledcAttach(TFT_BL, 10000, LEDC_TIMER_12_BIT);  // 10kHz frequency for backlight
-ledcWrite(TFT_BL, 4095); 
-
-// Set up PWM for the buzzer
-ledcAttach(BUZZER, LEDC_BASE_FREQ, LEDC_TIMER_12_BIT);  // Set buzzer frequency
-ledcWrite(BUZZER, 0);  //initially have the buzzer off. 
-  
-  // Initialize SCD4x sensor
-  Wire.begin();
-  scd4x.begin(Wire);
-  scanI2C();
-  DHT.begin();
-
-      uint16_t error = scd4x.startPeriodicMeasurement();
-    if (error) {
-        Serial.println("Failed to start SCD41 measurements.");
-    } else {
-        Serial.println("SCD41 measurement started.");
-    }
-  sprite.setColorDepth(8);
-  sprite.createSprite(320, 40);   // Size to match the "BREATHE Dashboard" section
-  sprite.loadFont(inter);         // Load custom font (inter)
-  sprite.setTextDatum(4);         // Set text alignment to center
-
-  // Draw BREATHE Dashboard Title
-  sprite.fillSprite(TFT_BLACK);   
-  sprite.setTextColor(TFT_WHITE);
-  sprite.setTextSize(1);  
-  sprite.drawString("B.R.E.A.T.H.E", 78, 24);  
-  sprite.pushSprite(0, 0);  
-
-  // Draw G40 On Dashboard TItle
-  sprite.fillSprite(TFT_BLACK);
-  sprite.setTextColor(TFT_WHITE);
-  sprite.drawString(" SET", 105, 24);
-  sprite.pushSprite(320, 0); 
-
-  tft.fillRect(0,40, 155,300, 0x1082);
-  tft.fillRect(0,275,700,200, 0x18c3); //0x18c3
-  //drawOpenCloseButtons();
-  //drawStatusBox(" ", 0x18c3);
-  //tft.fillRect(10,275, 300, 300, TFT_GREEN);
-
-
-    
-
-
-
-
-  //draw initial status boxes before data is sent to them
-  //drawStatusBox(100, 60, "Temp: -- °C", 0x31a6);
-  //drawStatusBox(10, 130, "CO2: -- ppm", 0x31a6);  // CO2 on the left side
-
-  //by default, initiliaze with autonomous mode
-  greenBtn();  
-  //drawGreenSquare();
-  // pinMode(BUZZER, OUTPUT);
-  drawValue();
-  drawVentStatus();
-  //lowBatteryNotification();
-
-/*
-        sprite.fillSprite(TFT_BLACK); // Clear previous value
-        sprite.setTextColor(TFT_WHITE);
-        sprite.drawString("test", 10, 30); // Display the current number
-        sprite.pushSprite(80, 80);  // Push the updated sprite to the screen
-        */
-  //sprite.drawString("Test", 120, 50);
-  //sprite.pushSprite(0, 0);
-
-  //tft.fillRect(156, 40, 900, 234,TFT_GREEN);
-  esp_err_t errRc=esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT,ESP_PWR_LVL_P9);
-  esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_P9);
-  esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_SCAN ,ESP_PWR_LVL_P9);
-
-  // --- FreeRTOS: Create BuzzerTask pinned to core 1 (or 0)
-  xTaskCreatePinnedToCore(
-    BuzzerTask,      // function
-    "BuzzerTask",    // name
-    4096,            // stack size
-    NULL,            // param
-    1,               // priority
-    &BuzzerTaskHandle,
-    1                // run on core 1 (or 0)
-  );
-
-}
 
 void loop() {
   //lowBatteryCharm();
